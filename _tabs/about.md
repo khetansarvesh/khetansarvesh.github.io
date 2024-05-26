@@ -2,7 +2,7 @@
 layout: page # the default layout is 'page'
 title: About | Contact
 icon: fas fa-info-circle
-order: 4
+order: 1
 ---
 
 <!-- ![Image1](/assets/img/POV-lightsaber/propic.jpg){: .shadow} -->
