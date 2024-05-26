@@ -5,9 +5,6 @@ icon: fas fa-info-circle
 order: 4
 ---
 
-> Add Markdown syntax content to file `_tabs/about.md`{: .filepath } and it will show up on this page.
-{: .prompt-tip }
-
 <!-- ![Image1](/assets/img/POV-lightsaber/propic.jpg){: .shadow} -->
 
 Hi, I'm `Sarvesh`, an *incoming graduate student* in `Applied Machine Learning` at `University of Maryland, College Park`. I find myself constantly drawn towards intriguing mathematics behind different Deep Learning Algorithms. I document most of my notes here and also put up resources that I prepare/teach my juniors.
