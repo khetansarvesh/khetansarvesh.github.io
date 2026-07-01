@@ -35,43 +35,104 @@ refactor: true
   }
 
 
-  .game-hint {
+  /* Tutorial overlay */
+  #tutorial-overlay {
     position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 300;
+    top: 0;
+    left: 260px;
+    right: 0;
+    bottom: 0;
+    background: rgba(26, 26, 26, 0.85);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: "Gochi Hand", cursive;
+    color: #f2efe4;
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.5s ease;
+  }
+
+  #tutorial-overlay.hidden {
+    opacity: 0;
     pointer-events: none;
   }
-  
-  .game-hint .arrow-pad {
-    display: grid;
-    grid-template-columns: repeat(3, 28px);
-    grid-template-rows: repeat(3, 28px);
-    gap: 3px;
-    background: rgba(242, 239, 228, 0.9);
-    padding: 8px;
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+
+  #tutorial-overlay h2 {
+    font-size: 42px;
+    margin-bottom: 40px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
   }
-  
-  .game-hint .arrow-key {
-    width: 28px;
-    height: 28px;
-    background: #1a1a1a;
-    color: #f2efe4;
-    border-radius: 6px;
+
+  .tutorial-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+
+  .tutorial-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .tutorial-key {
+    width: 50px;
+    height: 50px;
+    background: rgba(242, 239, 228, 0.15);
+    border: 2px solid rgba(242, 239, 228, 0.6);
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 24px;
     font-weight: bold;
   }
-  
-  .game-hint .arrow-key.up { grid-column: 2; grid-row: 1; }
-  .game-hint .arrow-key.left { grid-column: 1; grid-row: 2; }
-  .game-hint .arrow-key.down { grid-column: 2; grid-row: 3; }
-  .game-hint .arrow-key.right { grid-column: 3; grid-row: 2; }
-  .game-hint .empty { grid-column: 2; grid-row: 2; }
+
+  .tutorial-keys-horizontal {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tutorial-keys-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tutorial-label {
+    font-size: 22px;
+    color: rgba(242, 239, 228, 0.9);
+    min-width: 180px;
+  }
+
+  .tutorial-label.left {
+    text-align: right;
+  }
+
+  .tutorial-label.right {
+    text-align: left;
+  }
+
+  #tutorial-overlay .start-hint {
+    margin-top: 50px;
+    font-size: 18px;
+    color: rgba(242, 239, 228, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  @media (max-width: 849px) {
+    #tutorial-overlay { left: 0; }
+  }
 
   /* Matches the theme's sidebar collapse breakpoint (lg = 850px) so there's no gap when the sidebar is hidden */
   @media (max-width: 849px) {
@@ -85,14 +146,27 @@ refactor: true
   </div>
 </div>
 
-<div class="game-hint">
-  <div class="arrow-pad">
-    <div class="arrow-key up">↑</div>
-    <div class="arrow-key left">←</div>
-    <div class="empty"></div>
-    <div class="arrow-key right">→</div>
-    <div class="arrow-key down">↓</div>
+<div id="tutorial-overlay">
+  <h2>Journey So Far...</h2>
+  <div class="tutorial-controls">
+    <div class="tutorial-row">
+      <span class="tutorial-label left">Drive along timeline</span>
+      <div class="tutorial-keys-horizontal">
+        <div class="tutorial-key">←</div>
+        <div class="tutorial-key">→</div>
+      </div>
+      <span class="tutorial-label right"></span>
+    </div>
+    <div class="tutorial-row">
+      <span class="tutorial-label left">Switch tracks at lanes</span>
+      <div class="tutorial-keys-vertical">
+        <div class="tutorial-key">↑</div>
+        <div class="tutorial-key">↓</div>
+      </div>
+      <span class="tutorial-label right"></span>
+    </div>
   </div>
+  <p class="start-hint">Click or press any key to start</p>
 </div>
 
 <script>
@@ -100,6 +174,29 @@ refactor: true
   'use strict';
   
   console.log('Timeline script starting...');
+  
+  // Tutorial overlay dismiss functionality
+  const tutorialOverlay = document.getElementById('tutorial-overlay');
+  let tutorialDismissed = false;
+  
+  function dismissTutorial() {
+    if (tutorialDismissed) return;
+    tutorialDismissed = true;
+    if (tutorialOverlay) {
+      tutorialOverlay.classList.add('hidden');
+      setTimeout(() => {
+        tutorialOverlay.style.display = 'none';
+      }, 500);
+    }
+  }
+  
+  // Dismiss on click
+  if (tutorialOverlay) {
+    tutorialOverlay.addEventListener('click', dismissTutorial);
+  }
+  
+  // Dismiss on any key press
+  document.addEventListener('keydown', dismissTutorial, { once: true });
   
   // Check if Phaser loaded
   if (typeof Phaser === 'undefined') {
@@ -252,32 +349,32 @@ refactor: true
       title: '',
       role: 'Defect Detection Research · BITS Pilani',
       points: [
-        'Finetuned AlexNet on defective 3D parts',
-        'Lifted accuracy to 95%+ via dual hyperparameter tuning',
-        'Published in Advanced Science and Technology, Vol. 130',
+        'Finetuned AlexNet on defective 3D parts → lifted accuracy to 95%+ via dual hyperparameter tuning',
       ],
+      linkLabel: 'Publication',
+      linkUrl: 'https://www.scientific.net/AST.130.19',
       short: 'AlexNet Finetuning' },
 
     { id: 'roma', track: 'research', startYear: 2025.83, endYear: 2026.08, chalk: 0xce93d8,
       tag: '', tagLabel: '', year: '',
       title: '',
-      role: 'Agentic AI Research',
+      role: 'Recursive Agents Research',
       points: [
-        'Architected ROMA, a recursive deep search agent',
-        'Dependency-graph layer for intra-depth subagent communication',
-        'Parallel tool calling → +10% absolute lift over SOTA on SEAL-0 benchmark',
+        'Architected a recursive deep search agent with dependency-graph layer for subagent communication → +10% lift over SOTA on SEAL-0',
       ],
+      linkLabel: 'ROMA',
+      linkUrl: 'https://arxiv.org/abs/2602.01848',
       short: 'ROMA' },
 
     { id: 'sera', track: 'research', startYear: 2026.08, endYear: 2026.25, chalk: 0xce93d8,
       tag: '', tagLabel: '', year: '',
       title: '',
-      role: 'Tool Routing Research',
+      role: 'Large Action Space Agents Research',
       points: [
-        'Embedding-based tool-routing framework across 40+ tools',
-        '90% behavioral similarity to ReAct',
-        '50% latency drop and 30% fewer tool failures',
+        'Embedding-based tool-routing framework across 40+ tools → 50% latency drop and 30% fewer tool failures',
       ],
+      linkLabel: 'SERA',
+      linkUrl: 'https://www.sentient.xyz/blog/how-to-build-a-faster-and-smarter-agent-by-pre-filtering-tools-with-rag',
       short: 'SERA' },
 
     { id: 'evoskill', track: 'research', startYear: 2026.25, endYear: 2026.42, chalk: 0xce93d8,
@@ -365,7 +462,7 @@ refactor: true
       const chalkFont = '"Gochi Hand", cursive';
 
       // ── Title ────────────────────────────────────────────────────────────────────
-      this.add.text(LEFT_PAD + 10, 52, 'Journey So Far', {
+      this.add.text(LEFT_PAD + 10, 52, 'Journey So Far...', {
         fontFamily: chalkFont, fontSize: '36px', color: '#f2efe4',
       }).setShadow(2, 2, '#000', 4, false, true);
 
@@ -628,40 +725,58 @@ refactor: true
       this.carGfx.setPosition(this.carX, this.carY);
       this.carGfx.setAngle(90);
 
-      // ── Chalk info text (drawn on board — centered) ───────────────────────────
-      const infoX = W * 0.5;   // center of the board
-      const infoY = 50;
-      const infoW = W * 0.55;
+      // ── Chalk info text (drawn on board — centered in visible area) ───────────
+      // Center between LEFT_PAD and right edge for better positioning
+      const infoX = LEFT_PAD + (W - LEFT_PAD - 40) * 0.5;
+      const infoY = 20;
+      const infoW = Math.min(W - LEFT_PAD - 100, 500);  // Constrained width for text wrapping
 
       this.infoTag = this.add.text(infoX, infoY, '', {
         fontFamily: chalkFont, fontSize: '18px', color: '#ce93d8',
-        align: 'center',
+        align: 'center', wordWrap: { width: infoW },
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
 
       this.infoYear = this.add.text(infoX, infoY + 32, '', {
         fontFamily: '"Kalam", cursive', fontSize: '16px', color: '#b7b1a1',
-        align: 'center',
+        align: 'center', wordWrap: { width: infoW },
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 2, false, true);
 
       this.infoTitle = this.add.text(infoX, infoY + 58, '', {
-        fontFamily: chalkFont, fontSize: '32px', color: '#f2efe4',
-        align: 'center',
+        fontFamily: chalkFont, fontSize: '28px', color: '#f2efe4',
+        align: 'center', wordWrap: { width: infoW },
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(2, 2, '#000', 5, false, true);
 
       this.infoRole = this.add.text(infoX, infoY + 98, '', {
-        fontFamily: '"Kalam", cursive', fontSize: '20px', color: '#a8e6cf',
+        fontFamily: '"Kalam", cursive', fontSize: '18px', color: '#a8e6cf',
         wordWrap: { width: infoW }, align: 'center',
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
 
       this.infoPoints = this.add.text(infoX, infoY + 135, '', {
-        fontFamily: '"Kalam", cursive', fontSize: '18px', color: '#f5f5dc',
-        wordWrap: { width: infoW }, lineSpacing: 8, align: 'center',
+        fontFamily: '"Kalam", cursive', fontSize: '17px', color: '#ffffff',
+        wordWrap: { width: infoW }, lineSpacing: 6, align: 'center',
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
 
       this.infoGpa = this.add.text(infoX, infoY + 250, '', {
         fontFamily: chalkFont, fontSize: '20px', color: '#ffe082',
-        align: 'center',
+        align: 'center', wordWrap: { width: infoW },
       }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
+
+      // Link label (underlined, clickable)
+      this.infoLink = this.add.text(infoX, infoY + 175, '', {
+        fontFamily: chalkFont, fontSize: '18px', color: '#87ceeb',
+        align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true)
+        .setInteractive({ useHandCursor: true });
+      
+      this.infoLinkUrl = null;
+      this.infoLink.on('pointerdown', () => {
+        if (this.infoLinkUrl) {
+          window.open(this.infoLinkUrl, '_blank');
+        }
+      });
+      
+      // Graphics for link underline
+      this.linkUnderlineGfx = this.add.graphics();
 
       this.activeBlockId = null;
 
@@ -897,7 +1012,28 @@ refactor: true
         const points = hit.points || [];
         const currentIdx = Math.min(Math.floor(progress * points.length), points.length - 1);
         const currentPoint = points[currentIdx];
-        this.infoPoints.setText(currentPoint ? '✦ ' + currentPoint : '').setAlpha(currentPoint ? 1 : 0);
+        this.infoPoints.setText(currentPoint || '').setAlpha(currentPoint ? 1 : 0);
+
+        // Show link label if block has one (underlined, clickable)
+        if (hit.linkLabel && hit.linkUrl) {
+          const ptsBottom = this.infoPoints.y + this.infoPoints.height + 12;
+          this.infoLink.setY(ptsBottom);
+          this.infoLink.setText('→ ' + hit.linkLabel).setAlpha(1);
+          this.infoLinkUrl = hit.linkUrl;
+          
+          // Draw underline under link label
+          this.linkUnderlineGfx.clear();
+          this.linkUnderlineGfx.lineStyle(1.5, 0x87ceeb, 0.9);
+          const bounds = this.infoLink.getBounds();
+          // Underline only the label part (skip the arrow)
+          const labelWidth = this.infoLink.width * 0.85;
+          const startX = bounds.centerX - labelWidth / 2 + 10;
+          this.linkUnderlineGfx.lineBetween(startX, bounds.bottom + 2, startX + labelWidth, bounds.bottom + 2);
+        } else {
+          this.infoLink.setAlpha(0);
+          this.infoLinkUrl = null;
+          this.linkUnderlineGfx.clear();
+        }
 
         // Reposition and show GPA only when fully through the block
         const ptsBottom = this.infoPoints.y + this.infoPoints.height + 14;
@@ -916,6 +1052,9 @@ refactor: true
         this.infoRole.setAlpha(0);
         this.infoPoints.setAlpha(0);
         this.infoGpa.setAlpha(0);
+        this.infoLink.setAlpha(0);
+        this.infoLinkUrl = null;
+        this.linkUnderlineGfx.clear();
       }
       
       // Update background music (plays when car is moving - horizontally or vertically)
