@@ -1,20 +1,9 @@
 ---
-layout: default
+layout: page-noscript
 refactor: true
 ---
 
-<!-- Phaser 3 Game Engine - load with error handling -->
-<script>
-// Prevent theme errors from breaking our script
-window.addEventListener('error', function(e) {
-  if (e.filename && e.filename.includes('common.min.js')) {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    console.log('Ignored theme error:', e.message);
-    return false;
-  }
-}, true);
-</script>
+<!-- Phaser 3 Game Engine -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.85.2/dist/phaser.min.js" crossorigin="anonymous"></script>
 
 <!-- Chalk handwriting fonts -->
@@ -75,25 +64,22 @@ window.addEventListener('error', function(e) {
 <div class="game-hint">← →  drive　　↑ ↓  switch at lanes</div>
 
 <script>
-// Execute in next tick to avoid theme JavaScript conflicts
-setTimeout(function() {
-  try {
-    (function () {
-      'use strict';
-      
-      console.log('Timeline script starting...');
-      
-      // Check if Phaser loaded
-      if (typeof Phaser === 'undefined') {
-        console.error('Phaser failed to load from CDN');
-        const msg = document.getElementById('loading-message');
-        if (msg) {
-          msg.innerHTML = 'Error: Game engine failed to load.<br><small>Please check your internet connection and refresh</small>';
-        }
-        return;
-      }
-      
-      console.log('Phaser loaded successfully, version:', Phaser.VERSION);
+(function () {
+  'use strict';
+  
+  console.log('Timeline script starting...');
+  
+  // Check if Phaser loaded
+  if (typeof Phaser === 'undefined') {
+    console.error('Phaser failed to load from CDN');
+    const msg = document.getElementById('loading-message');
+    if (msg) {
+      msg.innerHTML = 'Error: Game engine failed to load.<br><small>Please check your internet connection and refresh</small>';
+    }
+    return;
+  }
+  
+  console.log('Phaser loaded successfully, version:', Phaser.VERSION);
 
   // ── World geometry (fits screen — no horizontal scroll) ───────────────────────
   const YEAR_START = 2016.9;
@@ -780,13 +766,5 @@ setTimeout(function() {
     }
   }, 2000);
 
-    })(); // end of IIFE
-  } catch (error) {
-    console.error('Timeline initialization error:', error);
-    const msg = document.getElementById('loading-message');
-    if (msg) {
-      msg.innerHTML = 'Error: ' + error.message;
-    }
-  }
-}, 100); // setTimeout wrapper
+})();
 </script>
