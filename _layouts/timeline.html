@@ -4,7 +4,7 @@ refactor: true
 ---
 
 <!-- Phaser 3 Game Engine -->
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.85.2/dist/phaser.min.js"></script>
 
 <!-- Chalk handwriting fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -701,19 +701,12 @@ refactor: true
     });
   }
 
-  window.addEventListener('load', () => {
-    let booted = false;
-    const go = () => { if (!booted) { booted = true; boot(); } };
-    if (document.fonts && document.fonts.load) {
-      Promise.all([
-        document.fonts.load('16px "Gochi Hand"'),
-        document.fonts.load('16px "Kalam"'),
-      ]).then(go).catch(go);
-      setTimeout(go, 1500); // safety fallback
-    } else {
-      go();
-    }
-  });
+  // Simpler initialization - boot immediately when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
 
 })();
 </script>
