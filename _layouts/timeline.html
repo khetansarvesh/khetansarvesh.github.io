@@ -86,7 +86,9 @@ refactor: true
   const LEFT_PAD   = 168;          // gutter for track labels
   const RIGHT_PAD  = 44;
 
-  // Timeline compression: skip 2020-2021 and 2023-2024 to give more space to recent years
+  // Timeline compression: skip Nov'18-Mar'19, 2020-2021, and 2023-2024 to give more space to recent years
+  const BREAK0_START = 2018.83;    // compress after Nov 2018
+  const BREAK0_END   = 2019.25;    // resume at Mar 2019
   const BREAK1_START = 2019.5;     // compress after mid-2019
   const BREAK1_END   = 2021.5;     // resume at mid-2021
   const BREAK2_START = 2022.5;     // compress after mid-2022
@@ -100,34 +102,51 @@ refactor: true
   const CHALK      = 0xf2efe4;     // chalk white
   const CHALK_CSS  = '#f2efe4';
 
-  // Non-linear year-to-pixel mapping (compresses 2020-2021 and 2023-2024)
+  // Non-linear year-to-pixel mapping (compresses 3 periods)
   function xOfYear(y) {
-    // Segment 1: before first break
-    if (y <= BREAK1_START) {
-      return LEFT_PAD + (y - YEAR_START) * PPY;
-    }
-    const seg1Width = (BREAK1_START - YEAR_START) * PPY;
+    let x = LEFT_PAD;
     
-    // Segment 2: inside first break
+    // Before break 0
+    if (y <= BREAK0_START) {
+      return x + (y - YEAR_START) * PPY;
+    }
+    x += (BREAK0_START - YEAR_START) * PPY;
+    
+    // Inside break 0
+    if (y < BREAK0_END) {
+      const frac = (y - BREAK0_START) / (BREAK0_END - BREAK0_START);
+      return x + frac * BREAK_WIDTH;
+    }
+    x += BREAK_WIDTH;
+    
+    // Between break 0 and break 1
+    if (y <= BREAK1_START) {
+      return x + (y - BREAK0_END) * PPY;
+    }
+    x += (BREAK1_START - BREAK0_END) * PPY;
+    
+    // Inside break 1
     if (y < BREAK1_END) {
       const frac = (y - BREAK1_START) / (BREAK1_END - BREAK1_START);
-      return LEFT_PAD + seg1Width + frac * BREAK_WIDTH;
+      return x + frac * BREAK_WIDTH;
     }
+    x += BREAK_WIDTH;
     
-    // Segment 3: between breaks
+    // Between break 1 and break 2
     if (y <= BREAK2_START) {
-      return LEFT_PAD + seg1Width + BREAK_WIDTH + (y - BREAK1_END) * PPY;
+      return x + (y - BREAK1_END) * PPY;
     }
-    const seg3Width = (BREAK2_START - BREAK1_END) * PPY;
+    x += (BREAK2_START - BREAK1_END) * PPY;
     
-    // Segment 4: inside second break
+    // Inside break 2
     if (y < BREAK2_END) {
       const frac = (y - BREAK2_START) / (BREAK2_END - BREAK2_START);
-      return LEFT_PAD + seg1Width + BREAK_WIDTH + seg3Width + frac * BREAK_WIDTH;
+      return x + frac * BREAK_WIDTH;
     }
+    x += BREAK_WIDTH;
     
-    // Segment 5: after second break
-    return LEFT_PAD + seg1Width + BREAK_WIDTH + seg3Width + BREAK_WIDTH + (y - BREAK2_END) * PPY;
+    // After break 2
+    return x + (y - BREAK2_END) * PPY;
   }
 
   // ── Tracks ────────────────────────────────────────────────────────────────────
@@ -295,9 +314,9 @@ refactor: true
 
       // Fit the whole timeline horizontally into the visible width
       // Account for the compressed break zone: effective years = (before break) + (after break)
-      // Account for both compressed break zones
-      const effectiveYears = (BREAK1_START - YEAR_START) + (BREAK2_START - BREAK1_END) + (YEAR_END - BREAK2_END);
-      const availableWidth = W - LEFT_PAD - RIGHT_PAD - (2 * BREAK_WIDTH);
+      // Account for all three compressed break zones
+      const effectiveYears = (BREAK0_START - YEAR_START) + (BREAK1_START - BREAK0_END) + (BREAK2_START - BREAK1_END) + (YEAR_END - BREAK2_END);
+      const availableWidth = W - LEFT_PAD - RIGHT_PAD - (3 * BREAK_WIDTH);
       PPY = availableWidth / effectiveYears;
       X0  = xOfYear(YEAR_START);
       X1  = xOfYear(YEAR_END);
@@ -316,9 +335,11 @@ refactor: true
         fontFamily: chalkFont, fontSize: '36px', color: '#f2efe4',
       }).setShadow(2, 2, '#000', 4, false, true);
 
-      // ── Vertical connector lanes (chalk) — only between connected tracks ───────
+      // ── Vertical connector lanes (chalk) — match horizontal track style ───────
       const connG = this.add.graphics();
-      connG.lineStyle(2.5, CHALK, 0.55);
+      // Use SAME dash pattern as horizontal tracks: dash=22, gap=10
+      const connDash = 22, connGap = 10;
+      
       CONNECTORS.forEach(conn => {
         const cx = xOfYear(conn.year);
         const sortedTracks = [...conn.tracks].sort((a, b) => a - b);
@@ -326,9 +347,10 @@ refactor: true
         const maxIdx = sortedTracks[sortedTracks.length - 1];
         const y1 = this.tracks[minIdx].y;
         const y2 = this.tracks[maxIdx].y;
-        // Draw dashed vertical line between connected tracks
-        for (let cy = y1; cy < y2; cy += 14) {
-          roughLine(connG, cx, cy, cx, Math.min(cy + 8, y2), 0.8);
+        // Draw dashed vertical line matching track style
+        connG.lineStyle(2.5, CHALK, 0.9);
+        for (let cy = y1; cy < y2; cy += connDash + connGap) {
+          roughLine(connG, cx, cy, cx, Math.min(cy + connDash, y2), 1.1);
         }
       });
 
@@ -376,7 +398,15 @@ refactor: true
       const breakG = this.add.graphics();
       breakG.lineStyle(2, CHALK, 0.5);
       
-      // First break (2020-2021)
+      // Break 0 (Nov 2018 - Mar 2019)
+      const break0X = xOfYear((BREAK0_START + BREAK0_END) / 2);
+      this.tracks.forEach(t => {
+        for (let i = -8; i <= 8; i += 8) {
+          roughLine(breakG, break0X - 6, t.y + i - 4, break0X + 6, t.y + i + 4, 1);
+        }
+      });
+      
+      // Break 1 (2020-2021)
       const break1X = xOfYear((BREAK1_START + BREAK1_END) / 2);
       this.tracks.forEach(t => {
         for (let i = -8; i <= 8; i += 8) {
@@ -384,7 +414,7 @@ refactor: true
         }
       });
       
-      // Second break (2023-2024)
+      // Break 2 (2023-2024)
       const break2X = xOfYear((BREAK2_START + BREAK2_END) / 2);
       this.tracks.forEach(t => {
         for (let i = -8; i <= 8; i += 8) {
@@ -393,78 +423,67 @@ refactor: true
       });
 
       // ── Block start/end markers (month labels on timeline) ────────────────────
+      // Use chalk-style dashed lines matching the track appearance
       const markerG = this.add.graphics();
       const labelY = H - 38;
+      const markerDash = 14, markerGap = 8;  // dash pattern like tracks
+
+      // Helper to draw chalk-style vertical dashed line
+      function drawMarkerLine(g, x, y1, y2) {
+        g.lineStyle(2.5, CHALK, 0.7);
+        for (let cy = y1; cy < y2; cy += markerDash + markerGap) {
+          roughLine(g, x, cy, x, Math.min(cy + markerDash, y2), 0.8);
+        }
+      }
 
       // BITS Pilani start — Aug 2018
       const bitsStartX = xOfYear(2018.67);
-      markerG.lineStyle(1.5, 0x90caf9, 0.6);
-      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, bitsStartX, cy, bitsStartX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, bitsStartX, eduTrackY + BLOCK_H / 2, labelY);
       this.add.text(bitsStartX, H - 40, 'Aug', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // BITS Pilani end — Jun 2022
       const bitsEndX = xOfYear(2022.42);
-      markerG.lineStyle(1.5, 0x90caf9, 0.6);
-      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, bitsEndX, cy, bitsEndX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, bitsEndX, eduTrackY + BLOCK_H / 2, labelY);
       this.add.text(bitsEndX, H - 40, 'Jun', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // UMD start — Aug 2024
       const umdStartX = xOfYear(2024.58);
-      markerG.lineStyle(1.5, 0x90caf9, 0.6);
-      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, umdStartX, cy, umdStartX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, umdStartX, eduTrackY + BLOCK_H / 2, labelY);
       this.add.text(umdStartX, H - 40, 'Aug', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // UMD end — May 2026
       const umdEndX = xOfYear(2026.42);
-      markerG.lineStyle(1.5, 0x90caf9, 0.6);
-      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, umdEndX, cy, umdEndX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, umdEndX, eduTrackY + BLOCK_H / 2, labelY);
       this.add.text(umdEndX, H - 40, 'May', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // Piramal start — Jun 2021
       const expTrackY = this.tracks[1].y;  // experience track
       const piramalStartX = xOfYear(2021.42);
-      markerG.lineStyle(1.5, 0xff9e80, 0.6);
-      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, piramalStartX, cy, piramalStartX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, piramalStartX, expTrackY + BLOCK_H / 2, labelY);
       this.add.text(piramalStartX, H - 40, 'Jun', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // Strategy start — Jun 2025
       const strategyStartX = xOfYear(2025.42);
-      markerG.lineStyle(1.5, 0xff9e80, 0.6);
-      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, strategyStartX, cy, strategyStartX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, strategyStartX, expTrackY + BLOCK_H / 2, labelY);
       this.add.text(strategyStartX, H - 40, 'Jun', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // Sentient start — Nov 2025
       const sentientStartX = xOfYear(2025.83);
-      markerG.lineStyle(1.5, 0xff9e80, 0.6);
-      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
-        roughLine(markerG, sentientStartX, cy, sentientStartX, Math.min(cy + 7, labelY), 0.6);
-      }
+      drawMarkerLine(markerG, sentientStartX, expTrackY + BLOCK_H / 2, labelY);
       this.add.text(sentientStartX, H - 40, 'Nov', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 0);
 
       // Research track markers (labels at TOP)
@@ -473,42 +492,30 @@ refactor: true
 
       // AlexNet start — Jan 2022
       const alexnetStartX = xOfYear(2022.08);
-      markerG.lineStyle(1.5, 0xce93d8, 0.6);
-      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
-        roughLine(markerG, alexnetStartX, cy, alexnetStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
-      }
+      drawMarkerLine(markerG, alexnetStartX, topLabelY, resTrackY - BLOCK_H / 2);
       this.add.text(alexnetStartX, topLabelY - 18, 'Jan', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 1);
 
       // ROMA start — Nov 2025
       const romaStartX = xOfYear(2025.83);
-      markerG.lineStyle(1.5, 0xce93d8, 0.6);
-      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
-        roughLine(markerG, romaStartX, cy, romaStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
-      }
+      drawMarkerLine(markerG, romaStartX, topLabelY, resTrackY - BLOCK_H / 2);
       this.add.text(romaStartX, topLabelY - 18, 'Nov', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 1);
 
       // SERA start — Feb 2026
       const seraStartX = xOfYear(2026.08);
-      markerG.lineStyle(1.5, 0xce93d8, 0.6);
-      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
-        roughLine(markerG, seraStartX, cy, seraStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
-      }
+      drawMarkerLine(markerG, seraStartX, topLabelY, resTrackY - BLOCK_H / 2);
       this.add.text(seraStartX, topLabelY - 18, 'Feb', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 1);
 
       // EvoSkill start — Apr 2026
       const evoskillStartX = xOfYear(2026.25);
-      markerG.lineStyle(1.5, 0xce93d8, 0.6);
-      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
-        roughLine(markerG, evoskillStartX, cy, evoskillStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
-      }
+      drawMarkerLine(markerG, evoskillStartX, topLabelY, resTrackY - BLOCK_H / 2);
       this.add.text(evoskillStartX, topLabelY - 18, 'Apr', {
-        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+        fontFamily: chalkFont, fontSize: '14px', color: CHALK_CSS,
       }).setOrigin(0.5, 1);
 
 
@@ -628,6 +635,10 @@ refactor: true
 
       this.cursors = this.input.keyboard.createCursorKeys();
 
+      // ── Background music (retro arcade style) ─────────────────────────────────
+      this.musicStarted = false;
+      this.setupMusic();
+
       // Recompute layout if the window resizes
       this.scale.on('resize', () => {
         clearTimeout(this._resizeTimer);
@@ -672,14 +683,84 @@ refactor: true
       g.fillRoundedRect(  4, 18, 11, 5, 2);
     }
 
+    setupMusic() {
+      // Create retro arcade-style background music using Web Audio API
+      try {
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.musicGain = this.audioCtx.createGain();
+        this.musicGain.gain.value = 0.15;  // Low volume
+        this.musicGain.connect(this.audioCtx.destination);
+        
+        // Simple melody notes (frequencies in Hz) - upbeat driving tune
+        this.melodyNotes = [
+          { freq: 330, dur: 0.15 }, { freq: 392, dur: 0.15 }, { freq: 440, dur: 0.15 }, { freq: 392, dur: 0.15 },
+          { freq: 330, dur: 0.15 }, { freq: 294, dur: 0.15 }, { freq: 330, dur: 0.3 },
+          { freq: 392, dur: 0.15 }, { freq: 440, dur: 0.15 }, { freq: 494, dur: 0.15 }, { freq: 440, dur: 0.15 },
+          { freq: 392, dur: 0.15 }, { freq: 330, dur: 0.15 }, { freq: 294, dur: 0.3 },
+        ];
+        this.noteIndex = 0;
+        this.lastNoteTime = 0;
+        this.musicInitialized = false;
+        this.isCarMoving = false;
+      } catch (e) {
+        console.log('Web Audio not available');
+        this.audioCtx = null;
+      }
+    }
+    
+    playNote(freq, duration) {
+      if (!this.audioCtx) return;
+      const osc = this.audioCtx.createOscillator();
+      const noteGain = this.audioCtx.createGain();
+      
+      osc.type = 'square';  // 8-bit retro sound
+      osc.frequency.value = freq;
+      
+      noteGain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+      noteGain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + duration * 0.9);
+      
+      osc.connect(noteGain);
+      noteGain.connect(this.musicGain);
+      
+      osc.start(this.audioCtx.currentTime);
+      osc.stop(this.audioCtx.currentTime + duration);
+    }
+    
+    updateMusic(time, carSpeed) {
+      if (!this.audioCtx) return;
+      
+      // Only play music when car is moving (speed > threshold)
+      this.isCarMoving = Math.abs(carSpeed) > 10;
+      
+      if (!this.isCarMoving) return;  // Don't play notes when stopped
+      
+      // Play next note in melody
+      const note = this.melodyNotes[this.noteIndex];
+      if (time - this.lastNoteTime > note.dur * 1000) {
+        this.playNote(note.freq, note.dur);
+        this.lastNoteTime = time;
+        this.noteIndex = (this.noteIndex + 1) % this.melodyNotes.length;
+      }
+    }
+    
+    initMusic() {
+      if (this.musicInitialized) return;
+      this.musicInitialized = true;
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+    }
+
     update(time, delta) {
       const dt  = delta / 1000;
       const ACC = 850, MAX = 620, DEC = 0.80;
 
       if (this.cursors.left.isDown) {
         this.carVX = Math.max(this.carVX - ACC * dt, -MAX); this.carFacing = -1;
+        this.initMusic();  // Initialize audio context on first interaction
       } else if (this.cursors.right.isDown) {
         this.carVX = Math.min(this.carVX + ACC * dt,  MAX); this.carFacing = 1;
+        this.initMusic();  // Initialize audio context on first interaction
       } else {
         this.carVX *= Math.pow(DEC, delta / 16.67);
         if (Math.abs(this.carVX) < 2) this.carVX = 0;
@@ -764,6 +845,9 @@ refactor: true
         this.infoPoints.setAlpha(0);
         this.infoGpa.setAlpha(0);
       }
+      
+      // Update background music (only plays when car is moving)
+      this.updateMusic(time, this.carVX);
     }
   }
 
