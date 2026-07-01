@@ -52,13 +52,29 @@ refactor: true
   }
 </style>
 
-<div id="timeline-container"></div>
+<div id="timeline-container">
+  <div id="loading-message" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f2efe4; font-family: Arial, sans-serif; font-size: 18px; text-align: center;">
+    Loading timeline...<br><small>If this message persists, please refresh the page</small>
+  </div>
+</div>
 
 <div class="game-hint">← →  drive　　↑ ↓  switch at lanes</div>
 
 <script>
 (function () {
   'use strict';
+  
+  console.log('Timeline script starting...');
+  
+  // Check if Phaser loaded
+  if (typeof Phaser === 'undefined') {
+    console.error('Phaser failed to load from CDN');
+    document.getElementById('loading-message').innerHTML = 
+      'Error: Game engine failed to load.<br><small>Please check your internet connection and refresh</small>';
+    return;
+  }
+  
+  console.log('Phaser loaded successfully, version:', Phaser.VERSION);
 
   // ── World geometry (fits screen — no horizontal scroll) ───────────────────────
   const YEAR_START = 2016.9;
@@ -687,26 +703,63 @@ refactor: true
     }
   }
 
-  // ── Boot (after chalk fonts load so canvas text renders correctly) ────────────
+  // ── Boot ────────────────────────────────────────────────────────────────────────
   function boot() {
+    console.log('Boot function called');
+    
     const container = document.getElementById('timeline-container');
-    new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: 'timeline-container',
-      width:  container.offsetWidth,
-      height: container.offsetHeight,
-      transparent: true,
-      scene: TimelineScene,
-      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
-    });
+    if (!container) {
+      console.error('Timeline container not found!');
+      return;
+    }
+    
+    console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
+    
+    try {
+      const game = new Phaser.Game({
+        type: Phaser.AUTO,
+        parent: 'timeline-container',
+        width:  container.offsetWidth,
+        height: container.offsetHeight,
+        transparent: true,
+        scene: TimelineScene,
+        scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
+      });
+      
+      console.log('Phaser game created successfully');
+      
+      // Remove loading message
+      const loadingMsg = document.getElementById('loading-message');
+      if (loadingMsg) loadingMsg.remove();
+      
+    } catch (error) {
+      console.error('Failed to create Phaser game:', error);
+      document.getElementById('loading-message').innerHTML = 
+        'Error initializing game: ' + error.message;
+    }
   }
 
-  // Simpler initialization - boot immediately when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
-  } else {
-    boot();
+  // Initialize when DOM is ready
+  function init() {
+    console.log('Init called, document.readyState:', document.readyState);
+    
+    if (document.readyState === 'loading') {
+      console.log('Waiting for DOMContentLoaded...');
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      console.log('DOM already ready, booting now');
+      boot();
+    }
   }
+  
+  // Call init immediately, and also set a fallback timeout
+  init();
+  setTimeout(() => {
+    if (document.getElementById('loading-message')) {
+      console.log('Fallback timeout triggered');
+      boot();
+    }
+  }, 2000);
 
 })();
 </script>
