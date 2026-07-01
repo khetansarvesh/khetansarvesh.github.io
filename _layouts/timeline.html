@@ -138,7 +138,92 @@ refactor: true
   @media (max-width: 849px) {
     #timeline-container { left: 0; }
   }
+
+  /* Sidebar toggle button (hamburger) */
+  #sidebar-toggle {
+    position: fixed;
+    top: 16px;
+    left: 270px;
+    width: 44px;
+    height: 44px;
+    background: rgba(42, 42, 42, 0.9);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    border-radius: 10px;
+    cursor: pointer;
+    z-index: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+  }
+
+  #sidebar-toggle:hover {
+    background: rgba(60, 60, 60, 0.95);
+    transform: scale(1.05);
+  }
+
+  #sidebar-toggle .bar {
+    width: 22px;
+    height: 3px;
+    background: #f2efe4;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+  }
+
+  /* When sidebar is hidden */
+  body.sidebar-hidden #sidebar {
+    transform: translateX(-100%);
+  }
+
+  body.sidebar-hidden #timeline-container {
+    left: 0;
+  }
+
+  body.sidebar-hidden #tutorial-overlay {
+    left: 0;
+  }
+
+  body.sidebar-hidden #sidebar-toggle {
+    left: 16px;
+  }
+
+  body.sidebar-hidden #sidebar-toggle .bar:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  body.sidebar-hidden #sidebar-toggle .bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  body.sidebar-hidden #sidebar-toggle .bar:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+  }
+
+  /* Sidebar transition */
+  #sidebar {
+    transition: transform 0.3s ease;
+  }
+
+  #timeline-container,
+  #tutorial-overlay {
+    transition: left 0.3s ease;
+  }
+
+  @media (max-width: 849px) {
+    #sidebar-toggle {
+      display: none;
+    }
+  }
 </style>
+
+<!-- Sidebar toggle button -->
+<button id="sidebar-toggle" aria-label="Toggle Sidebar" title="Toggle Sidebar (Full Screen)">
+  <span class="bar"></span>
+  <span class="bar"></span>
+  <span class="bar"></span>
+</button>
 
 <div id="timeline-container">
   <div id="loading-message" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f2efe4; font-family: Arial, sans-serif; font-size: 18px; text-align: center;">
@@ -197,6 +282,18 @@ refactor: true
   
   // Dismiss on any key press
   document.addEventListener('keydown', dismissTutorial, { once: true });
+  
+  // Sidebar toggle functionality
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+      document.body.classList.toggle('sidebar-hidden');
+      // Trigger resize event so Phaser can recalculate
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 350);
+    });
+  }
   
   // Check if Phaser loaded
   if (typeof Phaser === 'undefined') {
