@@ -46,14 +46,12 @@ refactor: true
     pointer-events: none;
   }
 
-  @media (max-width: 768px) {
+  /* Matches the theme's sidebar collapse breakpoint (lg = 850px) so there's no gap when the sidebar is hidden */
+  @media (max-width: 849px) {
     #timeline-container { left: 0; }
     .game-hint { left: 16px; }
   }
 </style>
-
-<!-- Page content from markdown -->
-<div style="display: none;">{{ content }}</div>
 
 <div id="timeline-container">
   <div id="loading-message" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f2efe4; font-family: Arial, sans-serif; font-size: 18px; text-align: center;">

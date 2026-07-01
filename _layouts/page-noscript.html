@@ -1,45 +1,36 @@
-<!DOCTYPE html>
-<html lang="{{ site.lang | default: 'en' }}">
+<!doctype html>
+
+{% include lang.html %}
+
+<html lang="{{ site.lang | default: 'en' }}" {%- if site.theme_mode == 'light' or site.theme_mode == 'dark' -%}data-bs-theme="{{ site.theme_mode }}"{%- endif -%}>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
+
   <title>{{ page.title | default: site.title }}</title>
-  
-  <!-- Favicon -->
+
   <link rel="icon" href="{{ '/assets/img/favicons/favicon.ico' | relative_url }}">
-  
-  <!-- Theme CSS only, no JavaScript -->
-  {% if jekyll.environment == 'production' %}
-    <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/jekyll-theme-chirpy.min.css">
-  {% else %}
-    <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/jekyll-theme-chirpy.css">
-  {% endif %}
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
-  
-  <style>
-    /* Additional styles to ensure proper layout without theme JS */
-    body { margin: 0; padding: 0; overflow-x: hidden; }
-    #sidebar { position: fixed; left: 0; top: 0; height: 100vh; z-index: 1000; }
-    #main-wrapper { margin-left: 260px; }
-    @media (max-width: 849px) {
-      #sidebar { transform: translateX(-100%); }
-      #main-wrapper { margin-left: 0; }
-    }
-  </style>
+
+  <!-- Bootstrap (needed for sidebar layout classes; bundled into theme CSS in production) -->
+  {% unless jekyll.environment == 'production' %}
+    <link rel="stylesheet" href="{{ site.data.origin.cors.bootstrap.css }}">
+  {% endunless %}
+
+  <!-- Theme style -->
+  <link rel="stylesheet" href="{{ '/assets/css/:THEME.css' | replace: ':THEME', site.theme | relative_url }}">
+
+  <!-- Font Awesome Icons (used by sidebar) -->
+  {% include origin-type.html %}
+  <link rel="stylesheet" href="{{ site.data.origin[type].fontawesome.css | relative_url }}">
+
+  <!-- Theme JS: handles light/dark mode, runs synchronously so it never conflicts with our page scripts -->
+  <script src="{{ '/assets/js/dist/theme.min.js' | relative_url }}"></script>
 </head>
 <body>
-  <!-- Sidebar -->
-  {% include sidebar.html %}
-  
-  <!-- Main content -->
-  <div id="main-wrapper" class="d-flex flex-column">
-    <div id="main">
-      {{ content }}
-    </div>
+  {% include sidebar.html lang=lang %}
+
+  <div id="main-wrapper">
+    {{ content }}
   </div>
-  
-  <!-- NO theme JavaScript loaded -->
 </body>
 </html>
