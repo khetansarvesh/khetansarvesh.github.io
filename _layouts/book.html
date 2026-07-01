@@ -5,7 +5,7 @@ layout: default
 <div id="book-container">
   <div class="book-scene">
     <!-- Left arrow button -->
-    <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous page" style="display: none;">
+    <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous page">
       <i class="fas fa-chevron-left"></i>
     </button>
     
@@ -42,12 +42,13 @@ layout: default
 <style>
 /* Book Container */
 #book-container {
-  width: 100%;
-  padding: 20px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: calc(100vh - 200px);
+  position: fixed;
+  top: 50%;
+  left: calc(50% + 130px);
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  padding: 20px;
+  width: auto;
 }
 
 /* Book Scene - 3D perspective container */
@@ -56,9 +57,7 @@ layout: default
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 100%;
+  gap: 25px;
 }
 
 /* Navigation Arrow Buttons */
@@ -99,6 +98,12 @@ layout: default
   background: linear-gradient(135deg, #5d4434 0%, #8B4513 100%);
 }
 
+/* Left arrow starts hidden but stays in layout */
+.nav-arrow-left {
+  visibility: hidden;
+  opacity: 0;
+}
+
 /* The Open Book */
 .book {
   display: flex;
@@ -123,14 +128,13 @@ layout: default
 
 /* Individual Pages */
 .book-page {
-  width: 100%;
-  max-width: 380px;
-  min-height: 60vh;
+  width: 38vw;
+  max-width: 550px;
+  height: 75vh;
   padding: 40px 45px;
   box-sizing: border-box;
   position: relative;
   overflow-y: auto;
-  max-height: 70vh;
   transition: box-shadow 0.3s ease;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -163,8 +167,8 @@ layout: default
   position: absolute;
   top: 0;
   right: 0;
-  width: calc(100% / 2 + 10px);
-  max-width: 390px;
+  width: calc(38vw + 11px);
+  max-width: 561px;
   height: 100%;
   transform-origin: left center;
   transform-style: preserve-3d;
@@ -236,8 +240,8 @@ layout: default
 
 /* Book Spine - the binding in the middle */
 .book-spine {
-  width: 20px;
-  min-height: 60vh;
+  width: 22px;
+  height: 75vh;
   position: relative;
   z-index: 10;
   flex-shrink: 0;
@@ -411,25 +415,46 @@ layout: default
 }
 
 /* Responsive */
+@media (max-width: 1400px) {
+  .book-page {
+    width: 35vw;
+    max-width: 480px;
+  }
+  
+  .turning-page {
+    width: calc(35vw + 11px);
+    max-width: 491px;
+  }
+}
+
 @media (max-width: 1200px) {
   .book-page {
-    max-width: 320px;
+    width: 38vw;
+    max-width: 420px;
     padding: 35px 35px;
   }
   
   .turning-page {
-    max-width: 330px;
+    width: calc(38vw + 11px);
+    max-width: 431px;
   }
 }
 
 @media (max-width: 992px) {
   .book-page {
-    max-width: 280px;
+    width: 40vw;
+    max-width: 380px;
     padding: 30px 30px;
+    height: 65vh;
+  }
+  
+  .book-spine {
+    height: 65vh;
   }
   
   .turning-page {
-    max-width: 290px;
+    width: calc(40vw + 11px);
+    max-width: 391px;
   }
   
   .nav-arrow {
@@ -443,6 +468,14 @@ layout: default
 }
 
 @media (max-width: 768px) {
+  #book-container {
+    position: relative;
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 20px 10px;
+  }
+  
   .book-scene {
     flex-direction: column;
     gap: 20px;
@@ -454,9 +487,9 @@ layout: default
   }
   
   .book-page {
-    width: 100%;
-    max-width: 350px;
-    min-height: 350px;
+    width: 85vw;
+    max-width: 400px;
+    height: 50vh;
     border-radius: 8px;
   }
   
@@ -470,24 +503,25 @@ layout: default
   }
   
   .book-spine {
-    width: 100%;
-    max-width: 350px;
+    width: 85vw;
+    max-width: 400px;
     height: 15px;
     min-height: 15px;
   }
   
   .nav-arrow {
     position: fixed;
+    z-index: 200;
   }
   
   .nav-arrow-left {
-    left: 20px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
   }
   
   .nav-arrow-right {
-    right: 20px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
   }
@@ -517,13 +551,19 @@ layout: default
 
 @media (max-width: 500px) {
   #book-container {
-    padding: 10px;
+    padding: 10px 5px;
   }
   
   .book-page {
+    width: 90vw;
     padding: 25px 20px;
-    min-height: 300px;
-    max-width: 300px;
+    height: 45vh;
+    max-width: 350px;
+  }
+  
+  .book-spine {
+    width: 90vw;
+    max-width: 350px;
   }
   
   .page-content h2 {
@@ -586,7 +626,9 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateButtons() {
     const maxSpread = Math.ceil(pages.length / 2) - 1;
     
-    prevBtn.style.display = currentSpread > 0 ? 'flex' : 'none';
+    // Use visibility/opacity instead of display to keep button in layout
+    prevBtn.style.visibility = currentSpread > 0 ? 'visible' : 'hidden';
+    prevBtn.style.opacity = currentSpread > 0 ? '1' : '0';
     nextBtn.disabled = currentSpread >= maxSpread;
     nextBtn.style.opacity = currentSpread >= maxSpread ? '0.3' : '1';
   }
