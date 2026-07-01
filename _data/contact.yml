@@ -8,12 +8,12 @@
 
 - type: email
   icon: "fas fa-envelope"
-  noblank: true # open link in current tab
-
-- type: rss
-  icon: "fas fa-rss"
   noblank: true
 
 - type: linkedin
   icon: 'fab fa-linkedin'
-  url:  'https://www.linkedin.com/in/sarveshkhetan/'
+  url: 'https://www.linkedin.com/in/sarveshkhetan/'
+
+- type: medium
+  icon: 'fab fa-medium'
+  url: 'https://khetansarvesh.medium.com/'

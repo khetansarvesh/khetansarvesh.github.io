@@ -16,7 +16,7 @@ timezone: Asia/Calcutta
 
 title: Sarvesh Khetan # the main title
 
-tagline: Deep Learning / AI / Machine Learning # it will display as the sub-title
+tagline: # it will display as the sub-title
 
 description: >- # used by seo meta and the atom feed
   A minimal, responsive and feature-rich Jekyll theme for technical writing.

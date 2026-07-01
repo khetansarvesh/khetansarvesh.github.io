@@ -1,0 +1,410 @@
+---
+layout: default
+---
+
+<div id="book-container">
+  <div class="book-scene">
+    <div class="book" id="open-book">
+      <!-- Left page -->
+      <div class="book-page left-page" id="left-page">
+        <div class="page-content" id="left-content"></div>
+      </div>
+      
+      <!-- Book spine/binding -->
+      <div class="book-spine"></div>
+      
+      <!-- Right page -->
+      <div class="book-page right-page" id="right-page">
+        <div class="page-content" id="right-content"></div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Book content from markdown -->
+<div id="book-content-source" style="display: none;">
+  {{ content }}
+</div>
+
+<style>
+/* Book Container */
+#book-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  padding: 20px;
+}
+
+/* Book Scene - 3D perspective container */
+.book-scene {
+  perspective: 2000px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* The Open Book */
+.book {
+  display: flex;
+  align-items: stretch;
+  transform-style: preserve-3d;
+  transform: rotateX(5deg);
+  position: relative;
+}
+
+/* Book shadow underneath */
+.book::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 5%;
+  right: 5%;
+  height: 30px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+  filter: blur(10px);
+  z-index: -1;
+}
+
+/* Individual Pages */
+.book-page {
+  width: 45vw;
+  max-width: 500px;
+  min-height: 70vh;
+  padding: 40px 45px;
+  box-sizing: border-box;
+  position: relative;
+  overflow-y: auto;
+  max-height: 75vh;
+  transition: transform 0.5s ease, box-shadow 0.3s ease;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.book-page::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Left Page */
+.left-page {
+  border-radius: 8px 0 0 8px;
+  transform-origin: right center;
+  box-shadow: 
+    -5px 5px 15px rgba(0,0,0,0.1),
+    inset 5px 0 15px rgba(0,0,0,0.05);
+}
+
+/* Right Page */
+.right-page {
+  border-radius: 0 8px 8px 0;
+  transform-origin: left center;
+  box-shadow: 
+    5px 5px 15px rgba(0,0,0,0.1),
+    inset -5px 0 15px rgba(0,0,0,0.05);
+}
+
+/* Book Spine - the binding in the middle */
+.book-spine {
+  width: 25px;
+  min-height: 70vh;
+  position: relative;
+  z-index: 10;
+}
+
+/* Light mode page colors */
+[data-mode="light"] .book-page,
+:root:not([data-mode="dark"]) .book-page {
+  background: linear-gradient(to right, #f8f5f0 0%, #fdfbf7 50%, #f8f5f0 100%);
+  color: #333;
+}
+
+[data-mode="light"] .left-page,
+:root:not([data-mode="dark"]) .left-page {
+  background: linear-gradient(to right, #f0ebe3 0%, #faf7f2 100%);
+}
+
+[data-mode="light"] .right-page,
+:root:not([data-mode="dark"]) .right-page {
+  background: linear-gradient(to left, #f0ebe3 0%, #faf7f2 100%);
+}
+
+[data-mode="light"] .book-spine,
+:root:not([data-mode="dark"]) .book-spine {
+  background: linear-gradient(to right, 
+    #8B4513 0%, 
+    #A0522D 20%,
+    #8B4513 50%,
+    #A0522D 80%,
+    #8B4513 100%
+  );
+  box-shadow: 
+    inset 0 0 10px rgba(0,0,0,0.4),
+    0 0 5px rgba(0,0,0,0.2);
+}
+
+/* Dark mode page colors */
+[data-mode="dark"] .book-page {
+  background: linear-gradient(to right, #2a2a35 0%, #32323f 50%, #2a2a35 100%);
+  color: #e0e0e0;
+}
+
+[data-mode="dark"] .left-page {
+  background: linear-gradient(to right, #252530 0%, #2d2d3a 100%);
+}
+
+[data-mode="dark"] .right-page {
+  background: linear-gradient(to left, #252530 0%, #2d2d3a 100%);
+}
+
+[data-mode="dark"] .book-spine {
+  background: linear-gradient(to right, 
+    #4a3728 0%, 
+    #5d4434 20%,
+    #4a3728 50%,
+    #5d4434 80%,
+    #4a3728 100%
+  );
+  box-shadow: 
+    inset 0 0 10px rgba(0,0,0,0.6),
+    0 0 5px rgba(0,0,0,0.4);
+}
+
+/* Page edges effect */
+.left-page::before,
+.right-page::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+}
+
+.left-page::before {
+  right: -1px;
+}
+
+.right-page::before {
+  left: -1px;
+}
+
+[data-mode="light"] .left-page::before,
+[data-mode="light"] .right-page::before,
+:root:not([data-mode="dark"]) .left-page::before,
+:root:not([data-mode="dark"]) .right-page::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    #e8e4dc 0px,
+    #f5f2eb 1px,
+    #e8e4dc 2px
+  );
+}
+
+[data-mode="dark"] .left-page::before,
+[data-mode="dark"] .right-page::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    #3a3a45 0px,
+    #454550 1px,
+    #3a3a45 2px
+  );
+}
+
+/* Page Content Styling */
+.page-content h2 {
+  font-size: 1.5rem;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+[data-mode="light"] .page-content h2,
+:root:not([data-mode="dark"]) .page-content h2 {
+  color: #5D4037;
+  border-color: #D7CCC8;
+}
+
+[data-mode="dark"] .page-content h2 {
+  color: #BCAAA4;
+  border-color: #5D4037;
+}
+
+.page-content p {
+  line-height: 1.8;
+  margin-bottom: 14px;
+  font-size: 1rem;
+  text-align: justify;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.page-content a {
+  color: #8B4513;
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dotted #8B4513;
+  transition: all 0.2s ease;
+}
+
+[data-mode="dark"] .page-content a {
+  color: #D2691E;
+  border-bottom-color: #D2691E;
+}
+
+.page-content a:hover {
+  color: #D2691E;
+  border-bottom-style: solid;
+}
+
+.page-content ul, .page-content ol {
+  margin: 14px 0;
+  padding-left: 22px;
+}
+
+.page-content li {
+  margin-bottom: 8px;
+  line-height: 1.7;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* Page turn animation */
+.page-turning-left .left-page {
+  animation: turnPageLeft 0.6s ease-in-out;
+}
+
+.page-turning-right .right-page {
+  animation: turnPageRight 0.6s ease-in-out;
+}
+
+@keyframes turnPageLeft {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(-90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+@keyframes turnPageRight {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+/* Empty page styling */
+.empty-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.3;
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .book {
+    flex-direction: column;
+    transform: rotateX(0deg);
+  }
+  
+  .book-page {
+    width: 100%;
+    max-width: 400px;
+    min-height: 350px;
+    border-radius: 8px;
+  }
+  
+  .left-page {
+    margin-bottom: 0;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .right-page {
+    border-radius: 0 0 8px 8px;
+  }
+  
+  .book-spine {
+    width: 100%;
+    max-width: 400px;
+    height: 15px;
+    min-height: 15px;
+  }
+  
+  [data-mode="light"] .book-spine,
+  :root:not([data-mode="dark"]) .book-spine {
+    background: linear-gradient(to bottom, 
+      #8B4513 0%, 
+      #A0522D 50%,
+      #8B4513 100%
+    );
+  }
+  
+  [data-mode="dark"] .book-spine {
+    background: linear-gradient(to bottom, 
+      #4a3728 0%, 
+      #5d4434 50%,
+      #4a3728 100%
+    );
+  }
+  
+  .left-page::before,
+  .right-page::before {
+    display: none;
+  }
+}
+
+@media (max-width: 500px) {
+  #book-container {
+    padding: 10px;
+  }
+  
+  .book-title {
+    font-size: 1.8rem;
+  }
+  
+  .book-page {
+    padding: 25px 20px;
+    min-height: 300px;
+  }
+  
+  .page-content h2 {
+    font-size: 1.3rem;
+  }
+  
+  .book-controls {
+    gap: 15px;
+  }
+  
+  .nav-btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+  
+  .book-toc ul {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const contentSource = document.getElementById('book-content-source');
+  const leftContent = document.getElementById('left-content');
+  const rightContent = document.getElementById('right-content');
+  
+  function parseContent() {
+    const content = contentSource.innerHTML;
+    // Split by horizontal rule - left page is before ---, right page is after
+    const sections = content.split(/<hr\s*\/?>/i);
+    
+    if (sections[0] && sections[0].trim()) {
+      leftContent.innerHTML = sections[0];
+    }
+    
+    if (sections[1] && sections[1].trim()) {
+      rightContent.innerHTML = sections[1];
+    }
+  }
+  
+  parseContent();
+});
+</script>
