@@ -580,7 +580,20 @@ layout: default
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+// Prevent theme errors from breaking our script
+window.addEventListener('error', function(e) {
+  if (e.filename && e.filename.includes('common.min.js')) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    console.log('Ignored theme error:', e.message);
+    return false;
+  }
+}, true);
+
+// Execute in next tick to avoid theme JavaScript conflicts
+setTimeout(function() {
+  try {
+    document.addEventListener('DOMContentLoaded', function() {
   const contentSource = document.getElementById('book-content-source');
   const leftContent = document.getElementById('left-content');
   const rightContent = document.getElementById('right-content');
@@ -733,5 +746,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize
   parseContent();
-});
+    }); // end of DOMContentLoaded
+  } catch (error) {
+    console.error('Book initialization error:', error);
+  }
+}, 100); // setTimeout wrapper
 </script>
