@@ -39,6 +39,7 @@ layout: default
   {{ content }}
 </div>
 
+
 <style>
 /* Book Container */
 #book-container {
@@ -587,6 +588,49 @@ document.addEventListener('DOMContentLoaded', function() {
   const prevBtn = document.getElementById('prev-btn');
   const nextBtn = document.getElementById('next-btn');
   
+  // Web Audio API for page turn sound
+  let audioContext = null;
+  
+  function playPageTurnSound() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const duration = 0.25;
+    const now = audioContext.currentTime;
+    
+    // Create noise for paper rustling effect
+    const bufferSize = audioContext.sampleRate * duration;
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    
+    const noise = audioContext.createBufferSource();
+    noise.buffer = noiseBuffer;
+    
+    // Filter to make it sound more like paper
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2000, now);
+    filter.Q.value = 0.5;
+    
+    // Envelope for the swoosh effect
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+    
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+  
   let currentSpread = 0;
   let pages = [];
   let isAnimating = false;
@@ -604,11 +648,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add empty pages if we have an odd number
     while (pages.length % 2 !== 0) {
       pages.push('<div class="empty-page">Page intentionally left blank</div>');
-    }
-    
-    // Add a few more empty spreads for future content
-    for (let i = 0; i < 4; i++) {
-      pages.push('<div class="empty-page">Coming soon...</div>');
     }
     
     renderSpread();
@@ -640,6 +679,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     isAnimating = true;
     
+    // Play page turn sound
+    playPageTurnSound();
+    
     // Show and animate the turning page
     turningPage.classList.remove('turning-page-back');
     turningPage.classList.add('active');
@@ -658,6 +700,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentSpread <= 0) return;
     
     isAnimating = true;
+    
+    // Play page turn sound
+    playPageTurnSound();
     
     currentSpread--;
     renderSpread();
