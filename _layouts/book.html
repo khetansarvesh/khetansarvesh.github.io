@@ -4,6 +4,11 @@ layout: default
 
 <div id="book-container">
   <div class="book-scene">
+    <!-- Left arrow button -->
+    <button class="nav-arrow nav-arrow-left" id="prev-btn" aria-label="Previous page" style="display: none;">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    
     <div class="book" id="open-book">
       <!-- Left page -->
       <div class="book-page left-page" id="left-page">
@@ -17,9 +22,16 @@ layout: default
       <div class="book-page right-page" id="right-page">
         <div class="page-content" id="right-content"></div>
       </div>
+      
+      <!-- Turning page overlay -->
+      <div class="turning-page" id="turning-page"></div>
     </div>
+    
+    <!-- Right arrow button -->
+    <button class="nav-arrow nav-arrow-right" id="next-btn" aria-label="Next page">
+      <i class="fas fa-chevron-right"></i>
+    </button>
   </div>
-  
 </div>
 
 <!-- Book content from markdown -->
@@ -30,12 +42,12 @@ layout: default
 <style>
 /* Book Container */
 #book-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 100;
-  padding: 20px;
+  width: 100%;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: calc(100vh - 200px);
 }
 
 /* Book Scene - 3D perspective container */
@@ -44,6 +56,47 @@ layout: default
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Navigation Arrow Buttons */
+.nav-arrow {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+  z-index: 200;
+  flex-shrink: 0;
+}
+
+.nav-arrow:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
+}
+
+.nav-arrow:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}
+
+[data-mode="dark"] .nav-arrow {
+  background: linear-gradient(135deg, #5d4434 0%, #8B4513 100%);
 }
 
 /* The Open Book */
@@ -70,21 +123,21 @@ layout: default
 
 /* Individual Pages */
 .book-page {
-  width: 45vw;
-  max-width: 500px;
-  min-height: 70vh;
+  width: 100%;
+  max-width: 380px;
+  min-height: 60vh;
   padding: 40px 45px;
   box-sizing: border-box;
   position: relative;
   overflow-y: auto;
-  max-height: 75vh;
-  transition: transform 0.5s ease, box-shadow 0.3s ease;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  max-height: 70vh;
+  transition: box-shadow 0.3s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .book-page::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
 /* Left Page */
@@ -105,12 +158,89 @@ layout: default
     inset -5px 0 15px rgba(0,0,0,0.05);
 }
 
+/* Turning Page */
+.turning-page {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(100% / 2 + 10px);
+  max-width: 390px;
+  height: 100%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  display: none;
+  border-radius: 0 8px 8px 0;
+}
+
+.turning-page.active {
+  display: block;
+  animation: turnPage 0.8s ease-in-out forwards;
+}
+
+.turning-page-back.active {
+  display: block;
+  animation: turnPageBack 0.8s ease-in-out forwards;
+}
+
+.turning-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to left, #f0ebe3 0%, #faf7f2 100%);
+  border-radius: 0 8px 8px 0;
+  backface-visibility: hidden;
+}
+
+.turning-page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, #f0ebe3 0%, #faf7f2 100%);
+  border-radius: 0 8px 8px 0;
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+}
+
+[data-mode="dark"] .turning-page::before {
+  background: linear-gradient(to left, #252530 0%, #2d2d3a 100%);
+}
+
+[data-mode="dark"] .turning-page::after {
+  background: linear-gradient(to right, #252530 0%, #2d2d3a 100%);
+}
+
+@keyframes turnPage {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes turnPageBack {
+  0% {
+    transform: rotateY(-180deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
 /* Book Spine - the binding in the middle */
 .book-spine {
-  width: 25px;
-  min-height: 70vh;
+  width: 20px;
+  min-height: 60vh;
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 /* Light mode page colors */
@@ -268,39 +398,56 @@ layout: default
   font-family: Georgia, 'Times New Roman', serif;
 }
 
-/* Page turn animation */
-.page-turning-left .left-page {
-  animation: turnPageLeft 0.6s ease-in-out;
-}
-
-.page-turning-right .right-page {
-  animation: turnPageRight 0.6s ease-in-out;
-}
-
-@keyframes turnPageLeft {
-  0% { transform: rotateY(0deg); }
-  50% { transform: rotateY(-90deg); }
-  100% { transform: rotateY(0deg); }
-}
-
-@keyframes turnPageRight {
-  0% { transform: rotateY(0deg); }
-  50% { transform: rotateY(90deg); }
-  100% { transform: rotateY(0deg); }
-}
-
 /* Empty page styling */
 .empty-page {
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0.3;
   font-style: italic;
   font-family: Georgia, serif;
+  font-size: 1.2rem;
 }
 
 /* Responsive */
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
+  .book-page {
+    max-width: 320px;
+    padding: 35px 35px;
+  }
+  
+  .turning-page {
+    max-width: 330px;
+  }
+}
+
+@media (max-width: 992px) {
+  .book-page {
+    max-width: 280px;
+    padding: 30px 30px;
+  }
+  
+  .turning-page {
+    max-width: 290px;
+  }
+  
+  .nav-arrow {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .book-scene {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .book-scene {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
   .book {
     flex-direction: column;
     transform: rotateX(0deg);
@@ -308,7 +455,7 @@ layout: default
   
   .book-page {
     width: 100%;
-    max-width: 400px;
+    max-width: 350px;
     min-height: 350px;
     border-radius: 8px;
   }
@@ -324,9 +471,25 @@ layout: default
   
   .book-spine {
     width: 100%;
-    max-width: 400px;
+    max-width: 350px;
     height: 15px;
     min-height: 15px;
+  }
+  
+  .nav-arrow {
+    position: fixed;
+  }
+  
+  .nav-arrow-left {
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  .nav-arrow-right {
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
   }
   
   [data-mode="light"] .book-spine,
@@ -357,30 +520,20 @@ layout: default
     padding: 10px;
   }
   
-  .book-title {
-    font-size: 1.8rem;
-  }
-  
   .book-page {
     padding: 25px 20px;
     min-height: 300px;
+    max-width: 300px;
   }
   
   .page-content h2 {
     font-size: 1.3rem;
   }
   
-  .book-controls {
-    gap: 15px;
-  }
-  
-  .nav-btn {
-    padding: 10px 18px;
-    font-size: 0.9rem;
-  }
-  
-  .book-toc ul {
-    grid-template-columns: 1fr;
+  .nav-arrow {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
   }
 }
 </style>
@@ -390,21 +543,108 @@ document.addEventListener('DOMContentLoaded', function() {
   const contentSource = document.getElementById('book-content-source');
   const leftContent = document.getElementById('left-content');
   const rightContent = document.getElementById('right-content');
+  const turningPage = document.getElementById('turning-page');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  
+  let currentSpread = 0;
+  let pages = [];
+  let isAnimating = false;
   
   function parseContent() {
     const content = contentSource.innerHTML;
-    // Split by horizontal rule - left page is before ---, right page is after
     const sections = content.split(/<hr\s*\/?>/i);
     
-    if (sections[0] && sections[0].trim()) {
-      leftContent.innerHTML = sections[0];
+    sections.forEach((section) => {
+      if (section.trim()) {
+        pages.push(section);
+      }
+    });
+    
+    // Add empty pages if we have an odd number
+    while (pages.length % 2 !== 0) {
+      pages.push('<div class="empty-page">Page intentionally left blank</div>');
     }
     
-    if (sections[1] && sections[1].trim()) {
-      rightContent.innerHTML = sections[1];
+    // Add a few more empty spreads for future content
+    for (let i = 0; i < 4; i++) {
+      pages.push('<div class="empty-page">Coming soon...</div>');
     }
+    
+    renderSpread();
+    updateButtons();
   }
   
+  function renderSpread() {
+    const leftIndex = currentSpread * 2;
+    const rightIndex = currentSpread * 2 + 1;
+    
+    leftContent.innerHTML = pages[leftIndex] || '<div class="empty-page"></div>';
+    rightContent.innerHTML = pages[rightIndex] || '<div class="empty-page"></div>';
+  }
+  
+  function updateButtons() {
+    const maxSpread = Math.ceil(pages.length / 2) - 1;
+    
+    prevBtn.style.display = currentSpread > 0 ? 'flex' : 'none';
+    nextBtn.disabled = currentSpread >= maxSpread;
+    nextBtn.style.opacity = currentSpread >= maxSpread ? '0.3' : '1';
+  }
+  
+  function nextSpread() {
+    if (isAnimating) return;
+    const maxSpread = Math.ceil(pages.length / 2) - 1;
+    if (currentSpread >= maxSpread) return;
+    
+    isAnimating = true;
+    
+    // Show and animate the turning page
+    turningPage.classList.remove('turning-page-back');
+    turningPage.classList.add('active');
+    
+    setTimeout(() => {
+      currentSpread++;
+      renderSpread();
+      turningPage.classList.remove('active');
+      updateButtons();
+      isAnimating = false;
+    }, 800);
+  }
+  
+  function prevSpread() {
+    if (isAnimating) return;
+    if (currentSpread <= 0) return;
+    
+    isAnimating = true;
+    
+    currentSpread--;
+    renderSpread();
+    
+    // Show and animate the turning page (reverse)
+    turningPage.classList.add('turning-page-back', 'active');
+    
+    setTimeout(() => {
+      turningPage.classList.remove('active', 'turning-page-back');
+      updateButtons();
+      isAnimating = false;
+    }, 800);
+  }
+  
+  // Event listeners
+  nextBtn.addEventListener('click', nextSpread);
+  prevBtn.addEventListener('click', prevSpread);
+  
+  // Keyboard navigation
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      nextSpread();
+    } else if (e.key === 'ArrowLeft') {
+      prevSpread();
+    }
+  });
+  
+  // Initialize
   parseContent();
 });
 </script>

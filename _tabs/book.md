@@ -23,8 +23,10 @@ This book is designed for **computer science students**, **software engineers**,
 - **Python Programming** - Comfortable with NumPy, pandas, and basic syntax
 - [**GPU Programming**](https://github.com/khetansarvesh/GPU-Engineering/tree/main)
 
+---
 
 ## Part 1 : Uni-Modal (Single Modality) Data Modelling
+
 - [Tabular Cross Sectional Data](https://github.com/khetansarvesh/Tabular-Cross-Sectional-Modelling/tree/main)
 - [Tabular Sequential Data](https://github.com/khetansarvesh/Time-Series-Modelling/tree/main)
 - [2D Image Data - Computer Vision (CV)](https://github.com/khetansarvesh/CV/tree/main)
@@ -32,5 +34,9 @@ This book is designed for **computer science students**, **software engineers**,
 - [Audio Data](https://github.com/khetansarvesh/Audio)
 - [Text Data - Natural Language Processing (NLP)](https://github.com/khetansarvesh/NLP)
 - [Graph Data](https://github.com/khetansarvesh/GNN/tree/main)
-      
-## Part 2 : [Multi-Modal Data Modelling](https://github.com/khetansarvesh/multimodal_ai)
+
+---
+
+## Part 2 : Multi-Modal Data Modelling
+
+- [Multi-Modal AI](https://github.com/khetansarvesh/multimodal_ai)
