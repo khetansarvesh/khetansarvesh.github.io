@@ -80,11 +80,18 @@ refactor: true
   console.log('Phaser loaded successfully, version:', Phaser.VERSION);
 
   // ── World geometry (fits screen — no horizontal scroll) ───────────────────────
-  const YEAR_START = 2016.9;
+  const YEAR_START = 2018.5;
   const YEAR_END   = 2027.1;
   const BLOCK_H    = 26;
   const LEFT_PAD   = 168;          // gutter for track labels
   const RIGHT_PAD  = 44;
+
+  // Timeline compression: skip 2020-2021 and 2023-2024 to give more space to recent years
+  const BREAK1_START = 2019.5;     // compress after mid-2019
+  const BREAK1_END   = 2021.5;     // resume at mid-2021
+  const BREAK2_START = 2022.5;     // compress after mid-2022
+  const BREAK2_END   = 2024;       // resume at start of 2024
+  const BREAK_WIDTH  = 30;         // pixels for each break indicator
 
   let PPY = 180;                   // pixels per year — recomputed to fit width
   let X0  = LEFT_PAD;              // pixel x of YEAR_START
@@ -93,7 +100,35 @@ refactor: true
   const CHALK      = 0xf2efe4;     // chalk white
   const CHALK_CSS  = '#f2efe4';
 
-  function xOfYear(y) { return LEFT_PAD + (y - YEAR_START) * PPY; }
+  // Non-linear year-to-pixel mapping (compresses 2020-2021 and 2023-2024)
+  function xOfYear(y) {
+    // Segment 1: before first break
+    if (y <= BREAK1_START) {
+      return LEFT_PAD + (y - YEAR_START) * PPY;
+    }
+    const seg1Width = (BREAK1_START - YEAR_START) * PPY;
+    
+    // Segment 2: inside first break
+    if (y < BREAK1_END) {
+      const frac = (y - BREAK1_START) / (BREAK1_END - BREAK1_START);
+      return LEFT_PAD + seg1Width + frac * BREAK_WIDTH;
+    }
+    
+    // Segment 3: between breaks
+    if (y <= BREAK2_START) {
+      return LEFT_PAD + seg1Width + BREAK_WIDTH + (y - BREAK1_END) * PPY;
+    }
+    const seg3Width = (BREAK2_START - BREAK1_END) * PPY;
+    
+    // Segment 4: inside second break
+    if (y < BREAK2_END) {
+      const frac = (y - BREAK2_START) / (BREAK2_END - BREAK2_START);
+      return LEFT_PAD + seg1Width + BREAK_WIDTH + seg3Width + frac * BREAK_WIDTH;
+    }
+    
+    // Segment 5: after second break
+    return LEFT_PAD + seg1Width + BREAK_WIDTH + seg3Width + BREAK_WIDTH + (y - BREAK2_END) * PPY;
+  }
 
   // ── Tracks ────────────────────────────────────────────────────────────────────
   const TRACK_DEFS = [
@@ -259,7 +294,11 @@ refactor: true
       const W = this.scale.width;
 
       // Fit the whole timeline horizontally into the visible width
-      PPY = (W - LEFT_PAD - RIGHT_PAD) / (YEAR_END - YEAR_START);
+      // Account for the compressed break zone: effective years = (before break) + (after break)
+      // Account for both compressed break zones
+      const effectiveYears = (BREAK1_START - YEAR_START) + (BREAK2_START - BREAK1_END) + (YEAR_END - BREAK2_END);
+      const availableWidth = W - LEFT_PAD - RIGHT_PAD - (2 * BREAK_WIDTH);
+      PPY = availableWidth / effectiveYears;
       X0  = xOfYear(YEAR_START);
       X1  = xOfYear(YEAR_END);
 
@@ -311,7 +350,9 @@ refactor: true
       // ── Year ticks + labels (chalk) ────────────────────────────────────────────
       const eduTrackY = this.tracks[2].y;  // education track (bottom)
 
-      for (let yr = 2017; yr <= 2027; yr++) {
+      // Show year labels, skipping the compressed zones (2020-2021 and 2023-2024)
+      const yearsToShow = [2019, 2022, 2024, 2025, 2026, 2027];
+      for (const yr of yearsToShow) {
         const x = xOfYear(yr);
         const tickG = this.add.graphics();
 
@@ -330,6 +371,26 @@ refactor: true
           fontFamily: chalkFont, fontSize: '18px', color: '#cfcabb',
         }).setOrigin(0.5, 0);
       }
+
+      // ── Break indicators (wavy lines to show skipped periods) ─────────────────
+      const breakG = this.add.graphics();
+      breakG.lineStyle(2, CHALK, 0.5);
+      
+      // First break (2020-2021)
+      const break1X = xOfYear((BREAK1_START + BREAK1_END) / 2);
+      this.tracks.forEach(t => {
+        for (let i = -8; i <= 8; i += 8) {
+          roughLine(breakG, break1X - 6, t.y + i - 4, break1X + 6, t.y + i + 4, 1);
+        }
+      });
+      
+      // Second break (2023-2024)
+      const break2X = xOfYear((BREAK2_START + BREAK2_END) / 2);
+      this.tracks.forEach(t => {
+        for (let i = -8; i <= 8; i += 8) {
+          roughLine(breakG, break2X - 6, t.y + i - 4, break2X + 6, t.y + i + 4, 1);
+        }
+      });
 
       // ── Block start/end markers (month labels on timeline) ────────────────────
       const markerG = this.add.graphics();
