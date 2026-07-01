@@ -382,10 +382,10 @@ refactor: true
       title: '',
       role: 'Self-Improving Agents Research',
       points: [
-        'Designed TraceDB (cross-iteration memory) for EvoSkill',
-        'Replaced stateless evolution in continuous self-improving harness',
-        '+7.3% on OfficeQA and +5.3% zero-shot transfer to BrowseComp',
+        'Designed TraceDB (cross-iteration memory) for continuous self-improving harness → +7.3% on OfficeQA and +5.3% zero-shot transfer',
       ],
+      linkLabel: 'EvoSkill',
+      linkUrl: 'https://github.com/sentient-agi/EvoSkill',
       short: 'EvoSkill' },
   ];
 
@@ -396,9 +396,9 @@ refactor: true
     { year: 2022.08, tracks: [0, 1, 2] },    // All tracks (AlexNet research start)
     { year: 2024.58, tracks: [1, 2] },       // Experience ↔ Education (Piramal → UMD)
     { year: 2025.42, tracks: [1, 2] },       // Education ↔ Experience (UMD → Strategy)
-    { year: 2025.83, tracks: [0, 1] },       // Experience ↔ Research (ROMA start)
-    { year: 2026.08, tracks: [0, 1] },       // Experience ↔ Research (SERA start)
-    { year: 2026.25, tracks: [0, 1] },       // Experience ↔ Research (EvoSkill start)
+    { year: 2025.83, tracks: [0, 1, 2] },    // All tracks (ROMA start, Sentient + UMD overlap)
+    { year: 2026.08, tracks: [0, 1, 2] },    // All tracks (SERA start)
+    { year: 2026.25, tracks: [0, 1, 2] },    // All tracks (EvoSkill start)
   ];
 
   const CONNECTOR_SNAP_DIST = 18;  // how close car must be (in pixels) to use a connector
@@ -993,7 +993,18 @@ refactor: true
       }
 
       // ── Update chalk info text (progressive reveal) ────────────────────────────
-      if (hit && hitBlockObj) {
+      // Hide info when switching tracks (on vertical lanes)
+      if (isSwitchingTracks) {
+        this.infoTag.setAlpha(0);
+        this.infoYear.setAlpha(0);
+        this.infoTitle.setAlpha(0);
+        this.infoRole.setAlpha(0);
+        this.infoPoints.setAlpha(0);
+        this.infoGpa.setAlpha(0);
+        this.infoLink.setAlpha(0);
+        this.linkUnderlineGfx.clear();
+        this.activeBlockId = null;
+      } else if (hit && hitBlockObj) {
         const blockWidth = hitBlockObj.x2 - hitBlockObj.x1;
         const progress = Math.max(0, Math.min(1, (this.carX - hitBlockObj.x1) / blockWidth));
 
