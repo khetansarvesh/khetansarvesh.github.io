@@ -21,3 +21,36 @@
 #search-result-wrapper {
   display: none !important;
 }
+
+/* Theme toggle button styling */
+#mode-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(128, 128, 128, 0.2);
+  color: var(--text-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#mode-toggle:hover {
+  background: rgba(128, 128, 128, 0.35);
+  transform: scale(1.1);
+}
+
+#mode-toggle:active {
+  transform: scale(0.95);
+}
+
+.profile-wrapper {
+  position: relative;
+}

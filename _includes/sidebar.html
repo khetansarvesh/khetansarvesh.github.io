@@ -2,6 +2,10 @@
 
 <aside aria-label="Sidebar" id="sidebar" class="d-flex flex-column align-items-end">
   <header class="profile-wrapper">
+    <!-- Theme toggle above profile picture -->
+    <button id="mode-toggle" class="mode-toggle btn" aria-label="Switch Theme" title="Switch Theme">
+      <i class="fas fa-adjust"></i>
+    </button>
     <a href="{{ '/' | relative_url }}" id="avatar" class="rounded-circle">
       {%- if site.avatar != empty and site.avatar -%}
         {%- capture avatar_url -%}

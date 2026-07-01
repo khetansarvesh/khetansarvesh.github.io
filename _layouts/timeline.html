@@ -38,24 +38,44 @@ refactor: true
   .game-hint {
     position: fixed;
     top: 16px;
-    left: 276px;
-    font-family: "Gochi Hand", cursive;
-    font-size: 15px;
-    letter-spacing: 0.4px;
-    color: #1a1a1a;
-    background: #f2efe4;
-    border: 2px solid #f2efe4;
-    border-radius: 20px;
-    padding: 3px 16px;
+    right: 16px;
     z-index: 300;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
     pointer-events: none;
   }
+  
+  .game-hint .arrow-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
+    grid-template-rows: repeat(3, 28px);
+    gap: 3px;
+    background: rgba(242, 239, 228, 0.9);
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  }
+  
+  .game-hint .arrow-key {
+    width: 28px;
+    height: 28px;
+    background: #1a1a1a;
+    color: #f2efe4;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  
+  .game-hint .arrow-key.up { grid-column: 2; grid-row: 1; }
+  .game-hint .arrow-key.left { grid-column: 1; grid-row: 2; }
+  .game-hint .arrow-key.down { grid-column: 2; grid-row: 3; }
+  .game-hint .arrow-key.right { grid-column: 3; grid-row: 2; }
+  .game-hint .empty { grid-column: 2; grid-row: 2; }
 
   /* Matches the theme's sidebar collapse breakpoint (lg = 850px) so there's no gap when the sidebar is hidden */
   @media (max-width: 849px) {
     #timeline-container { left: 0; }
-    .game-hint { left: 16px; }
   }
 </style>
 
@@ -65,7 +85,15 @@ refactor: true
   </div>
 </div>
 
-<div class="game-hint">← →  drive　　↑ ↓  switch at lanes</div>
+<div class="game-hint">
+  <div class="arrow-pad">
+    <div class="arrow-key up">↑</div>
+    <div class="arrow-key left">←</div>
+    <div class="empty"></div>
+    <div class="arrow-key right">→</div>
+    <div class="arrow-key down">↓</div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -761,22 +789,48 @@ refactor: true
     update(time, delta) {
       const dt  = delta / 1000;
       const ACC = 850, MAX = 620, DEC = 0.80;
+      const VERTICAL_SPEED = 280;  // pixels per second for track switching
 
-      if (this.cursors.left.isDown) {
-        this.carVX = Math.max(this.carVX - ACC * dt, -MAX); this.carFacing = -1;
-        this.initMusic();  // Initialize audio context on first interaction
-      } else if (this.cursors.right.isDown) {
-        this.carVX = Math.min(this.carVX + ACC * dt,  MAX); this.carFacing = 1;
-        this.initMusic();  // Initialize audio context on first interaction
+      // Check if currently switching tracks (moving vertically)
+      const verticalDiff = this.carTargetY - this.carY;
+      const isSwitchingTracks = Math.abs(verticalDiff) > 3;
+
+      if (isSwitchingTracks) {
+        // While switching tracks: stop horizontal movement, move vertically
+        this.carVX = 0;
+        
+        // Move vertically at controlled speed
+        const verticalMove = VERTICAL_SPEED * dt;
+        if (verticalDiff > 0) {
+          this.carY = Math.min(this.carY + verticalMove, this.carTargetY);
+        } else {
+          this.carY = Math.max(this.carY - verticalMove, this.carTargetY);
+        }
+        
+        // Car faces direction of vertical movement
+        this.carGfx.setAngle(verticalDiff > 0 ? 180 : 0);  // down = 180°, up = 0°
+        this.initMusic();
       } else {
-        this.carVX *= Math.pow(DEC, delta / 16.67);
-        if (Math.abs(this.carVX) < 2) this.carVX = 0;
+        // Normal horizontal movement
+        if (this.cursors.left.isDown) {
+          this.carVX = Math.max(this.carVX - ACC * dt, -MAX); this.carFacing = -1;
+          this.initMusic();
+        } else if (this.cursors.right.isDown) {
+          this.carVX = Math.min(this.carVX + ACC * dt,  MAX); this.carFacing = 1;
+          this.initMusic();
+        } else {
+          this.carVX *= Math.pow(DEC, delta / 16.67);
+          if (Math.abs(this.carVX) < 2) this.carVX = 0;
+        }
+        
+        this.carX = Phaser.Math.Clamp(this.carX + this.carVX * dt, X0, X1);
+        this.carGfx.setAngle(this.carFacing > 0 ? 90 : -90);
       }
-
-      this.carX = Phaser.Math.Clamp(this.carX + this.carVX * dt, X0, X1);
 
       // ── Track switching — only allowed at connector lanes ─────────────────────
       const trySwitch = (dir) => {
+        if (isSwitchingTracks) return false;  // Can't switch while already switching
+        
         const newIdx = this.targetTrackIdx + dir;
         if (newIdx < 0 || newIdx >= this.tracks.length) return false;
 
@@ -786,6 +840,8 @@ refactor: true
           if (Math.abs(this.carX - cx) <= CONNECTOR_SNAP_DIST) {
             // Does this connector link both tracks?
             if (conn.tracks.includes(this.targetTrackIdx) && conn.tracks.includes(newIdx)) {
+              // Snap to connector X position for clean vertical travel
+              this.carX = cx;
               this.targetTrackIdx = newIdx;
               this.carTargetY = this.tracks[newIdx].y;
               return true;
@@ -798,9 +854,7 @@ refactor: true
       if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) trySwitch(-1);
       if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) trySwitch(1);
 
-      this.carY += (this.carTargetY - this.carY) * 0.12;
       this.carGfx.setPosition(this.carX, this.carY);
-      this.carGfx.setAngle(this.carFacing > 0 ? 90 : -90);
 
       const currentTrackId = this.tracks[this.targetTrackIdx].id;
       let hit = null;
@@ -864,8 +918,11 @@ refactor: true
         this.infoGpa.setAlpha(0);
       }
       
-      // Update background music (only plays when car is moving)
-      this.updateMusic(time, this.carVX);
+      // Update background music (plays when car is moving - horizontally or vertically)
+      const vertDiff = Math.abs(this.carTargetY - this.carY);
+      const isMovingVertically = vertDiff > 3;
+      const effectiveSpeed = isMovingVertically ? 280 : this.carVX;  // Use vertical speed when switching
+      this.updateMusic(time, effectiveSpeed);
     }
   }
 
