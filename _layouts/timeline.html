@@ -1,0 +1,719 @@
+---
+layout: default
+refactor: true
+---
+
+<!-- Phaser 3 Game Engine -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.88.0/dist/phaser.min.js"></script>
+
+<!-- Chalk handwriting fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  #timeline-container {
+    position: fixed;
+    top: 0;
+    left: 260px;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    /* Chalkboard */
+    background-color: #2b352e;
+    background-image:
+      radial-gradient(circle at 22% 28%, rgba(255,255,255,0.045), transparent 26%),
+      radial-gradient(circle at 82% 72%, rgba(255,255,255,0.04),  transparent 26%),
+      radial-gradient(circle at 60% 15%, rgba(255,255,255,0.03),  transparent 30%),
+      radial-gradient(circle at 50% 55%, rgba(255,255,255,0.025), transparent 75%);
+  }
+
+
+  .game-hint {
+    position: fixed;
+    top: 16px;
+    left: 276px;
+    font-family: "Gochi Hand", cursive;
+    font-size: 15px;
+    letter-spacing: 0.4px;
+    color: #2b352e;
+    background: #f2efe4;
+    border: 2px solid #f2efe4;
+    border-radius: 20px;
+    padding: 3px 16px;
+    z-index: 300;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  @media (max-width: 768px) {
+    #timeline-container { left: 0; }
+    .game-hint { left: 16px; }
+  }
+</style>
+
+<div id="timeline-container"></div>
+
+<div class="game-hint">← →  drive　　↑ ↓  switch at lanes</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── World geometry (fits screen — no horizontal scroll) ───────────────────────
+  const YEAR_START = 2016.9;
+  const YEAR_END   = 2027.1;
+  const BLOCK_H    = 26;
+  const LEFT_PAD   = 168;          // gutter for track labels
+  const RIGHT_PAD  = 44;
+
+  let PPY = 180;                   // pixels per year — recomputed to fit width
+  let X0  = LEFT_PAD;              // pixel x of YEAR_START
+  let X1  = 1000;                 // pixel x of YEAR_END
+
+  const CHALK      = 0xf2efe4;     // chalk white
+  const CHALK_CSS  = '#f2efe4';
+
+  function xOfYear(y) { return LEFT_PAD + (y - YEAR_START) * PPY; }
+
+  // ── Tracks ────────────────────────────────────────────────────────────────────
+  const TRACK_DEFS = [
+    { id: 'research',   label: 'Research Track',   yFrac: 0.30, hex: 0xf2efe4, css: '#f2efe4' },
+    { id: 'experience', label: 'Experience Track', yFrac: 0.50, hex: 0xf2efe4, css: '#f2efe4' },
+    { id: 'education',  label: 'Education Track',   yFrac: 0.70, hex: 0xf2efe4, css: '#f2efe4' },
+  ];
+
+  // ── Blocks (from résumé) ──────────────────────────────────────────────────────
+  // Block colour matches its track colour for a cohesive chalk look.
+  const BLOCK_DEFS = [
+    { id: 'bits',     track: 'education',  startYear: 2018.67, endYear: 2022.42, chalk: 0x90caf9,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'B.Tech Mechanical Engineering · Pilani, India',
+      points: [
+        'Minor in Data Science',
+        'TA for Linear Optimization',
+      ],
+      gpa: 'GPA  3.77 / 4.0', short: 'BITS Pilani' },
+
+    { id: 'piramal',  track: 'experience', startYear: 2021.42, endYear: 2024.67, chalk: 0xff9e80,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'Data Scientist · AI Engineer · India',
+      points: [
+        'Led team of 5 on a patented RAG Text2SQL graph agent → secured $1M+ GenAI funding',
+        'Upgraded unimodal → multimodal RAG (VLMs): +35% retrieval relevance',
+        'LLMOps: CI/CD LLM deploys on ECS/Docker → −30% build latency',
+      ],
+      short: 'Piramal Capital and Housing Finance' },
+
+    { id: 'umd',      track: 'education',  startYear: 2024.58, endYear: 2026.42, chalk: 0x90caf9,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'M.S. in Machine Learning',
+      points: [
+        'TA for Machine Learning (×2)',
+      ],
+      gpa: 'GPA  3.90 / 4.0', short: 'University of Maryland, College Park' },
+
+    { id: 'strategy', track: 'experience', startYear: 2025.42, endYear: 2025.67, chalk: 0xff9e80,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'SWE · AI Research Intern · Virginia, USA',
+      points: [
+        'Optimized a ReAct Deep Research agent with planners + tools → +40% quality',
+        'RAG Azure Blob connector: 1-click ingest of 1,000+ files, 10+ formats',
+        'Long-context LLM-as-Judge evaluator → 94% agreement with humans',
+      ],
+      short: 'Strategy' },
+
+    { id: 'sentient', track: 'experience', startYear: 2025.83, endYear: 2026.42, chalk: 0xff9e80,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'AI Research Intern · Remote, USA',
+      points: [
+        'DPO on branching reward-labeled traces → +18% agent task success',
+        'Designed SERA benchmark & tool-grounded evaluation framework',
+        'Agentic harness tracing (Harbor ATIF) merged into official repo',
+        'MCP Sidecar architecture for secure agent tool hosting',
+      ],
+      short: 'Sentient Labs' },
+
+    // Research Track
+    { id: 'alexnet', track: 'research', startYear: 2022.08, endYear: 2022.42, chalk: 0xce93d8,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'Defect Detection Research · BITS Pilani',
+      points: [
+        'Finetuned AlexNet on defective 3D parts',
+        'Lifted accuracy to 95%+ via dual hyperparameter tuning',
+        'Published in Advanced Science and Technology, Vol. 130',
+      ],
+      short: 'AlexNet Finetuning' },
+
+    { id: 'roma', track: 'research', startYear: 2025.83, endYear: 2026.08, chalk: 0xce93d8,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'Agentic AI Research',
+      points: [
+        'Architected ROMA, a recursive deep search agent',
+        'Dependency-graph layer for intra-depth subagent communication',
+        'Parallel tool calling → +10% absolute lift over SOTA on SEAL-0 benchmark',
+      ],
+      short: 'ROMA' },
+
+    { id: 'sera', track: 'research', startYear: 2026.08, endYear: 2026.25, chalk: 0xce93d8,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'Tool Routing Research',
+      points: [
+        'Embedding-based tool-routing framework across 40+ tools',
+        '90% behavioral similarity to ReAct',
+        '50% latency drop and 30% fewer tool failures',
+      ],
+      short: 'SERA' },
+
+    { id: 'evoskill', track: 'research', startYear: 2026.25, endYear: 2026.42, chalk: 0xce93d8,
+      tag: '', tagLabel: '', year: '',
+      title: '',
+      role: 'Self-Improving Agents Research',
+      points: [
+        'Designed TraceDB (cross-iteration memory) for EvoSkill',
+        'Replaced stateless evolution in continuous self-improving harness',
+        '+7.3% on OfficeQA and +5.3% zero-shot transfer to BrowseComp',
+      ],
+      short: 'EvoSkill' },
+  ];
+
+  // ── Connector lanes (car can only switch tracks here) ───────────────────────
+  // Each connector has a year and the track indices it connects (0=research, 1=experience, 2=education)
+  const CONNECTORS = [
+    { year: 2021.42, tracks: [1, 2] },       // Education ↔ Experience (BITS → Piramal)
+    { year: 2022.08, tracks: [0, 1, 2] },    // All tracks (AlexNet research start)
+    { year: 2024.58, tracks: [1, 2] },       // Experience ↔ Education (Piramal → UMD)
+    { year: 2025.42, tracks: [1, 2] },       // Education ↔ Experience (UMD → Strategy)
+    { year: 2025.83, tracks: [0, 1] },       // Experience ↔ Research (ROMA start)
+    { year: 2026.08, tracks: [0, 1] },       // Experience ↔ Research (SERA start)
+    { year: 2026.25, tracks: [0, 1] },       // Experience ↔ Research (EvoSkill start)
+  ];
+
+  const CONNECTOR_SNAP_DIST = 18;  // how close car must be (in pixels) to use a connector
+
+  // Tag colors for chalk text
+  const TAG_COLORS = {
+    education: '#90caf9',
+    work: '#9ccc65',
+    research: '#ce93d8',
+  };
+
+  // ── Hand-drawn chalk helpers ──────────────────────────────────────────────────
+  // Draw a line as wobbly segments so it looks sketched by hand.
+  function roughLine(g, x1, y1, x2, y2, jitter) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len, py = dx / len;      // perpendicular unit vector
+    const n = Math.max(2, Math.round(len / 16));
+    g.beginPath();
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const off = (i === 0 || i === n) ? 0 : (Math.random() - 0.5) * jitter * 2;
+      const x = x1 + dx * t + px * off;
+      const y = y1 + dy * t + py * off;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.strokePath();
+  }
+
+  function roughRect(g, x, y, w, h, jitter) {
+    roughLine(g, x,     y,     x + w, y,     jitter);
+    roughLine(g, x + w, y,     x + w, y + h, jitter);
+    roughLine(g, x + w, y + h, x,     y + h, jitter);
+    roughLine(g, x,     y + h, x,     y,     jitter);
+  }
+
+  // ── Scene ──────────────────────────────────────────────────────────────────────
+  class TimelineScene extends Phaser.Scene {
+    constructor() { super({ key: 'Timeline' }); }
+
+    create() {
+      const H = this.scale.height;
+      const W = this.scale.width;
+
+      // Fit the whole timeline horizontally into the visible width
+      PPY = (W - LEFT_PAD - RIGHT_PAD) / (YEAR_END - YEAR_START);
+      X0  = xOfYear(YEAR_START);
+      X1  = xOfYear(YEAR_END);
+
+      this.tracks = TRACK_DEFS.map(t => ({ ...t, y: Math.round(H * t.yFrac) }));
+      const trackById = {};
+      this.tracks.forEach(t => { trackById[t.id] = t; });
+
+      const topY = this.tracks[0].y;
+      const botY = this.tracks[this.tracks.length - 1].y;
+
+      const chalkFont = '"Gochi Hand", cursive';
+
+      // ── Title ────────────────────────────────────────────────────────────────────
+      this.add.text(LEFT_PAD + 10, 52, 'Journey So Far', {
+        fontFamily: chalkFont, fontSize: '36px', color: '#f2efe4',
+      }).setShadow(2, 2, '#000', 4, false, true);
+
+      // ── Vertical connector lanes (chalk) — only between connected tracks ───────
+      const connG = this.add.graphics();
+      connG.lineStyle(2.5, CHALK, 0.55);
+      CONNECTORS.forEach(conn => {
+        const cx = xOfYear(conn.year);
+        const sortedTracks = [...conn.tracks].sort((a, b) => a - b);
+        const minIdx = sortedTracks[0];
+        const maxIdx = sortedTracks[sortedTracks.length - 1];
+        const y1 = this.tracks[minIdx].y;
+        const y2 = this.tracks[maxIdx].y;
+        // Draw dashed vertical line between connected tracks
+        for (let cy = y1; cy < y2; cy += 14) {
+          roughLine(connG, cx, cy, cx, Math.min(cy + 8, y2), 0.8);
+        }
+      });
+
+      // ── Track dashed chalk lines + labels ──────────────────────────────────────
+      this.tracks.forEach(track => {
+        const tg = this.add.graphics();
+        tg.lineStyle(2.5, track.hex, 0.9);
+        const dash = 22, gap = 10;
+        for (let x = X0; x < X1; x += dash + gap) {
+          roughLine(tg, x, track.y, Math.min(x + dash, X1), track.y, 1.1);
+        }
+
+        // Fixed track label pinned to screen left
+        this.add.text(14, track.y - 26, track.label, {
+          fontFamily: chalkFont, fontSize: '20px', color: track.css,
+        }).setScrollFactor(0).setShadow(1, 1, '#000', 3, false, true);
+      });
+
+      // ── Year ticks + labels (chalk) ────────────────────────────────────────────
+      const eduTrackY = this.tracks[2].y;  // education track (bottom)
+
+      for (let yr = 2017; yr <= 2027; yr++) {
+        const x = xOfYear(yr);
+        const tickG = this.add.graphics();
+
+        // Small tick marks at each track
+        tickG.lineStyle(1.5, CHALK, 0.5);
+        this.tracks.forEach(t => roughLine(tickG, x, t.y - 10, x, t.y + 10, 0.6));
+
+        // Vertical dashed line from year label up to education track
+        tickG.lineStyle(1.5, CHALK, 0.3);
+        const labelY = H - 38;
+        for (let cy = labelY; cy > eduTrackY + 12; cy -= 12) {
+          roughLine(tickG, x, cy, x, Math.max(cy - 7, eduTrackY + 12), 0.5);
+        }
+
+        this.add.text(x, H - 40, "'" + String(yr).slice(2), {
+          fontFamily: chalkFont, fontSize: '18px', color: '#cfcabb',
+        }).setOrigin(0.5, 0);
+      }
+
+      // ── Block start/end markers (month labels on timeline) ────────────────────
+      const markerG = this.add.graphics();
+      const labelY = H - 38;
+
+      // BITS Pilani start — Aug 2018
+      const bitsStartX = xOfYear(2018.67);
+      markerG.lineStyle(1.5, 0x90caf9, 0.6);
+      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, bitsStartX, cy, bitsStartX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(bitsStartX, H - 40, 'Aug', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+      }).setOrigin(0.5, 0);
+
+      // BITS Pilani end — Jun 2022
+      const bitsEndX = xOfYear(2022.42);
+      markerG.lineStyle(1.5, 0x90caf9, 0.6);
+      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, bitsEndX, cy, bitsEndX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(bitsEndX, H - 40, 'Jun', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+      }).setOrigin(0.5, 0);
+
+      // UMD start — Aug 2024
+      const umdStartX = xOfYear(2024.58);
+      markerG.lineStyle(1.5, 0x90caf9, 0.6);
+      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, umdStartX, cy, umdStartX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(umdStartX, H - 40, 'Aug', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+      }).setOrigin(0.5, 0);
+
+      // UMD end — May 2026
+      const umdEndX = xOfYear(2026.42);
+      markerG.lineStyle(1.5, 0x90caf9, 0.6);
+      for (let cy = eduTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, umdEndX, cy, umdEndX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(umdEndX, H - 40, 'May', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#90caf9',
+      }).setOrigin(0.5, 0);
+
+      // Piramal start — Jun 2021
+      const expTrackY = this.tracks[1].y;  // experience track
+      const piramalStartX = xOfYear(2021.42);
+      markerG.lineStyle(1.5, 0xff9e80, 0.6);
+      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, piramalStartX, cy, piramalStartX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(piramalStartX, H - 40, 'Jun', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+      }).setOrigin(0.5, 0);
+
+      // Strategy start — Jun 2025
+      const strategyStartX = xOfYear(2025.42);
+      markerG.lineStyle(1.5, 0xff9e80, 0.6);
+      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, strategyStartX, cy, strategyStartX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(strategyStartX, H - 40, 'Jun', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+      }).setOrigin(0.5, 0);
+
+      // Sentient start — Nov 2025
+      const sentientStartX = xOfYear(2025.83);
+      markerG.lineStyle(1.5, 0xff9e80, 0.6);
+      for (let cy = expTrackY + BLOCK_H / 2; cy < labelY; cy += 12) {
+        roughLine(markerG, sentientStartX, cy, sentientStartX, Math.min(cy + 7, labelY), 0.6);
+      }
+      this.add.text(sentientStartX, H - 40, 'Nov', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ff9e80',
+      }).setOrigin(0.5, 0);
+
+      // Research track markers (labels at TOP)
+      const resTrackY = this.tracks[0].y;  // research track
+      const topLabelY = 60;  // top area for labels
+
+      // AlexNet start — Jan 2022
+      const alexnetStartX = xOfYear(2022.08);
+      markerG.lineStyle(1.5, 0xce93d8, 0.6);
+      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
+        roughLine(markerG, alexnetStartX, cy, alexnetStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
+      }
+      this.add.text(alexnetStartX, topLabelY - 18, 'Jan', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+      }).setOrigin(0.5, 1);
+
+      // ROMA start — Nov 2025
+      const romaStartX = xOfYear(2025.83);
+      markerG.lineStyle(1.5, 0xce93d8, 0.6);
+      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
+        roughLine(markerG, romaStartX, cy, romaStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
+      }
+      this.add.text(romaStartX, topLabelY - 18, 'Nov', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+      }).setOrigin(0.5, 1);
+
+      // SERA start — Feb 2026
+      const seraStartX = xOfYear(2026.08);
+      markerG.lineStyle(1.5, 0xce93d8, 0.6);
+      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
+        roughLine(markerG, seraStartX, cy, seraStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
+      }
+      this.add.text(seraStartX, topLabelY - 18, 'Feb', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+      }).setOrigin(0.5, 1);
+
+      // EvoSkill start — Apr 2026
+      const evoskillStartX = xOfYear(2026.25);
+      markerG.lineStyle(1.5, 0xce93d8, 0.6);
+      for (let cy = topLabelY; cy < resTrackY - BLOCK_H / 2; cy += 12) {
+        roughLine(markerG, evoskillStartX, cy, evoskillStartX, Math.min(cy + 7, resTrackY - BLOCK_H / 2), 0.6);
+      }
+      this.add.text(evoskillStartX, topLabelY - 18, 'Apr', {
+        fontFamily: chalkFont, fontSize: '14px', color: '#ce93d8',
+      }).setOrigin(0.5, 1);
+
+
+      // ── Duration blocks (chalk hatched boxes) ──────────────────────────────────
+      this.blockObjects = [];
+
+      BLOCK_DEFS.forEach(b => {
+        const track = trackById[b.track];
+        if (!track) return;
+
+        const x1 = xOfYear(b.startYear);
+        const x2 = xOfYear(b.endYear);
+        const bw = x2 - x1;
+        const by = track.y - BLOCK_H / 2;
+
+        const g = this.add.graphics();
+
+        // Faint chalk fill
+        g.fillStyle(b.chalk, 0.14);
+        g.fillRect(x1, by, bw, BLOCK_H);
+
+        // Diagonal chalk hatching, clipped to the box
+        g.lineStyle(1.5, b.chalk, 0.55);
+        const step = 10;
+        for (let hx = x1 - BLOCK_H; hx < x2; hx += step) {
+          const ax  = Math.max(x1, hx);
+          const ay  = hx >= x1 ? by : by + (x1 - hx);
+          const bx2 = Math.min(x2, hx + BLOCK_H);
+          const by2 = (hx + BLOCK_H) <= x2 ? by + BLOCK_H : by + (x2 - hx);
+          if (bx2 > ax) roughLine(g, ax, ay, bx2, by2, 0.5);
+        }
+
+        // Rough chalk outline
+        g.lineStyle(2, b.chalk, 0.95);
+        roughRect(g, x1, by, bw, BLOCK_H, 0.9);
+
+        // Label positioning - stagger ROMA and EvoSkill at different heights
+        let labelYPos;
+        let labelOrigin;
+        if (b.id === 'roma') {
+          labelYPos = track.y - BLOCK_H / 2 - 28;  // higher up
+          labelOrigin = 1;
+        } else if (b.id === 'evoskill') {
+          labelYPos = track.y - BLOCK_H / 2 - 14;  // closer to bar
+          labelOrigin = 1;
+        } else if (b.track === 'research' && b.id !== 'sera') {
+          labelYPos = track.y - BLOCK_H / 2 - 14;
+          labelOrigin = 1;
+        } else if (b.id === 'strategy') {
+          labelYPos = track.y - BLOCK_H / 2 - 14;
+          labelOrigin = 1;
+        } else {
+          labelYPos = track.y + BLOCK_H / 2 + 10;
+          labelOrigin = 0;
+        }
+        this.add.text((x1 + x2) / 2, labelYPos, b.short, {
+          fontFamily: chalkFont, fontSize: '14px', color: '#fdfbf3',
+        }).setOrigin(0.5, labelOrigin).setShadow(1, 1, '#000', 3, false, true);
+
+        this.blockObjects.push({ def: b, x1, x2, trackId: b.track });
+      });
+
+      // ── Car ────────────────────────────────────────────────────────────────────
+      this.carGfx = this.add.graphics();
+      this.drawCar(this.carGfx);
+      this.carGfx.setScale(0.8);
+
+      this.targetTrackIdx = 2;                 // start on Education
+      this.carX = xOfYear(2018.0);
+      this.carY = this.tracks[2].y;
+      this.carTargetY = this.carY;
+      this.carVX = 0;
+      this.carFacing = 1;
+
+      this.carGfx.setPosition(this.carX, this.carY);
+      this.carGfx.setAngle(90);
+
+      // ── Chalk info text (drawn on board — centered) ───────────────────────────
+      const infoX = W * 0.5;   // center of the board
+      const infoY = 50;
+      const infoW = W * 0.55;
+
+      this.infoTag = this.add.text(infoX, infoY, '', {
+        fontFamily: chalkFont, fontSize: '18px', color: '#ce93d8',
+        align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
+
+      this.infoYear = this.add.text(infoX, infoY + 32, '', {
+        fontFamily: '"Kalam", cursive', fontSize: '16px', color: '#b7b1a1',
+        align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 2, false, true);
+
+      this.infoTitle = this.add.text(infoX, infoY + 58, '', {
+        fontFamily: chalkFont, fontSize: '32px', color: '#f2efe4',
+        align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(2, 2, '#000', 5, false, true);
+
+      this.infoRole = this.add.text(infoX, infoY + 98, '', {
+        fontFamily: '"Kalam", cursive', fontSize: '20px', color: '#a8e6cf',
+        wordWrap: { width: infoW }, align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
+
+      this.infoPoints = this.add.text(infoX, infoY + 135, '', {
+        fontFamily: '"Kalam", cursive', fontSize: '18px', color: '#f5f5dc',
+        wordWrap: { width: infoW }, lineSpacing: 8, align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
+
+      this.infoGpa = this.add.text(infoX, infoY + 250, '', {
+        fontFamily: chalkFont, fontSize: '20px', color: '#ffe082',
+        align: 'center',
+      }).setOrigin(0.5, 0).setAlpha(0).setShadow(1, 1, '#000', 3, false, true);
+
+      this.activeBlockId = null;
+
+      // Everything fits on screen → static camera, no scrolling
+      this.cameras.main.setBounds(0, 0, W, H);
+
+      this.cursors = this.input.keyboard.createCursorKeys();
+
+      // Recompute layout if the window resizes
+      this.scale.on('resize', () => {
+        clearTimeout(this._resizeTimer);
+        this._resizeTimer = setTimeout(() => this.scene.restart(), 150);
+      });
+    }
+
+    drawCar(g) {
+      g.clear();
+
+      // Soft chalk glow beneath (instead of dark shadow)
+      g.fillStyle(0xffffff, 0.06); g.fillEllipse(0, 6, 58, 22);
+      g.fillStyle(0xffffff, 0.05); g.fillEllipse(0, 6, 44, 16);
+
+      // Body
+      g.fillStyle(0xf2efe4, 1);
+      g.fillRoundedRect(-20, -40, 40, 56, 9);
+      g.lineStyle(2.5, 0x2b352e, 1);
+      g.strokeRoundedRect(-20, -40, 40, 56, 9);
+
+      // Windshield
+      g.fillStyle(0x4a6572, 0.9);
+      g.fillRoundedRect(-13, -36, 26, 18, 4);
+      // Rear window
+      g.fillStyle(0x4a6572, 0.65);
+      g.fillRoundedRect(-11, 8, 22, 10, 3);
+
+      // Wheels
+      g.fillStyle(0x1c1c1c, 1);
+      g.fillRoundedRect(-27, -32, 11, 17, 3);
+      g.fillRoundedRect( 16, -32, 11, 17, 3);
+      g.fillRoundedRect(-27,   5, 11, 17, 3);
+      g.fillRoundedRect( 16,   5, 11, 17, 3);
+
+      // Headlights
+      g.fillStyle(0xffe082, 1);
+      g.fillRoundedRect(-15, -44, 11, 6, 2);
+      g.fillRoundedRect(  4, -44, 11, 6, 2);
+      // Tail lights
+      g.fillStyle(0xff5252, 1);
+      g.fillRoundedRect(-15, 18, 11, 5, 2);
+      g.fillRoundedRect(  4, 18, 11, 5, 2);
+    }
+
+    update(time, delta) {
+      const dt  = delta / 1000;
+      const ACC = 850, MAX = 620, DEC = 0.80;
+
+      if (this.cursors.left.isDown) {
+        this.carVX = Math.max(this.carVX - ACC * dt, -MAX); this.carFacing = -1;
+      } else if (this.cursors.right.isDown) {
+        this.carVX = Math.min(this.carVX + ACC * dt,  MAX); this.carFacing = 1;
+      } else {
+        this.carVX *= Math.pow(DEC, delta / 16.67);
+        if (Math.abs(this.carVX) < 2) this.carVX = 0;
+      }
+
+      this.carX = Phaser.Math.Clamp(this.carX + this.carVX * dt, X0, X1);
+
+      // ── Track switching — only allowed at connector lanes ─────────────────────
+      const trySwitch = (dir) => {
+        const newIdx = this.targetTrackIdx + dir;
+        if (newIdx < 0 || newIdx >= this.tracks.length) return false;
+
+        // Check if car is near a connector that links current and target tracks
+        for (const conn of CONNECTORS) {
+          const cx = xOfYear(conn.year);
+          if (Math.abs(this.carX - cx) <= CONNECTOR_SNAP_DIST) {
+            // Does this connector link both tracks?
+            if (conn.tracks.includes(this.targetTrackIdx) && conn.tracks.includes(newIdx)) {
+              this.targetTrackIdx = newIdx;
+              this.carTargetY = this.tracks[newIdx].y;
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) trySwitch(-1);
+      if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) trySwitch(1);
+
+      this.carY += (this.carTargetY - this.carY) * 0.12;
+      this.carGfx.setPosition(this.carX, this.carY);
+      this.carGfx.setAngle(this.carFacing > 0 ? 90 : -90);
+
+      const currentTrackId = this.tracks[this.targetTrackIdx].id;
+      let hit = null;
+      for (const bo of this.blockObjects) {
+        if (bo.trackId === currentTrackId && this.carX >= bo.x1 - 5 && this.carX <= bo.x2 + 5) {
+          hit = bo.def; break;
+        }
+      }
+
+      // ── Update chalk info text (progressive reveal) ────────────────────────────
+      if (hit) {
+        // Find the block object to get x1/x2
+        const bo = this.blockObjects.find(b => b.def.id === hit.id);
+        const blockWidth = bo.x2 - bo.x1;
+        const progress = Math.max(0, Math.min(1, (this.carX - bo.x1) / blockWidth));
+
+        if (this.activeBlockId !== hit.id) {
+          // First time entering this block — show header info
+          this.activeBlockId = hit.id;
+
+          const tagColor = TAG_COLORS[hit.tag] || '#f2efe4';
+          this.infoTag.setText(hit.tagLabel ? hit.tagLabel.toUpperCase() : '').setColor(tagColor).setAlpha(hit.tagLabel ? 1 : 0);
+          this.infoYear.setText(hit.year || '').setAlpha(hit.year ? 1 : 0);
+          this.infoTitle.setText(hit.title || '').setAlpha(hit.title ? 1 : 0);
+          this.infoRole.setText(hit.role || '').setAlpha(hit.role ? 1 : 0);
+        }
+
+        // Show ONE point at a time based on progress (replaces, not appends)
+        const points = hit.points || [];
+        const currentIdx = Math.min(Math.floor(progress * points.length), points.length - 1);
+        const currentPoint = points[currentIdx];
+        this.infoPoints.setText(currentPoint ? '✦ ' + currentPoint : '').setAlpha(currentPoint ? 1 : 0);
+
+        // Reposition and show GPA only when fully through the block
+        const ptsBottom = this.infoPoints.y + this.infoPoints.height + 14;
+        this.infoGpa.setY(ptsBottom);
+        if (hit.gpa && progress >= 0.95) {
+          this.infoGpa.setText(hit.gpa).setAlpha(1);
+        } else {
+          this.infoGpa.setAlpha(0);
+        }
+
+      } else if (this.activeBlockId) {
+        this.activeBlockId = null;
+        this.infoTag.setAlpha(0);
+        this.infoYear.setAlpha(0);
+        this.infoTitle.setAlpha(0);
+        this.infoRole.setAlpha(0);
+        this.infoPoints.setAlpha(0);
+        this.infoGpa.setAlpha(0);
+      }
+    }
+  }
+
+  // ── Boot (after chalk fonts load so canvas text renders correctly) ────────────
+  function boot() {
+    const container = document.getElementById('timeline-container');
+    new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: 'timeline-container',
+      width:  container.offsetWidth,
+      height: container.offsetHeight,
+      transparent: true,
+      scene: TimelineScene,
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
+    });
+  }
+
+  window.addEventListener('load', () => {
+    let booted = false;
+    const go = () => { if (!booted) { booted = true; boot(); } };
+    if (document.fonts && document.fonts.load) {
+      Promise.all([
+        document.fonts.load('16px "Gochi Hand"'),
+        document.fonts.load('16px "Kalam"'),
+      ]).then(go).catch(go);
+      setTimeout(go, 1500); // safety fallback
+    } else {
+      go();
+    }
+  });
+
+})();
+</script>
