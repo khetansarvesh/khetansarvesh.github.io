@@ -571,11 +571,12 @@ refactor: true
           labelYPos = track.y + BLOCK_H / 2 + 10;
           labelOrigin = 0;
         }
-        this.add.text((x1 + x2) / 2, labelYPos, b.short, {
+        // Create label but start hidden - will reveal when car enters
+        const blockLabel = this.add.text((x1 + x2) / 2, labelYPos, b.short, {
           fontFamily: chalkFont, fontSize: '14px', color: '#fdfbf3',
-        }).setOrigin(0.5, labelOrigin).setShadow(1, 1, '#000', 3, false, true);
+        }).setOrigin(0.5, labelOrigin).setShadow(1, 1, '#000', 3, false, true).setAlpha(0);
 
-        this.blockObjects.push({ def: b, x1, x2, trackId: b.track });
+        this.blockObjects.push({ def: b, x1, x2, trackId: b.track, label: blockLabel, revealed: false });
       });
 
       // ── Car ────────────────────────────────────────────────────────────────────
@@ -797,18 +798,29 @@ refactor: true
 
       const currentTrackId = this.tracks[this.targetTrackIdx].id;
       let hit = null;
+      let hitBlockObj = null;
       for (const bo of this.blockObjects) {
         if (bo.trackId === currentTrackId && this.carX >= bo.x1 - 5 && this.carX <= bo.x2 + 5) {
-          hit = bo.def; break;
+          hit = bo.def;
+          hitBlockObj = bo;
+          // Reveal the label when car enters (stays visible after)
+          if (!bo.revealed && bo.label) {
+            bo.revealed = true;
+            this.tweens.add({
+              targets: bo.label,
+              alpha: 1,
+              duration: 400,
+              ease: 'Power2'
+            });
+          }
+          break;
         }
       }
 
       // ── Update chalk info text (progressive reveal) ────────────────────────────
-      if (hit) {
-        // Find the block object to get x1/x2
-        const bo = this.blockObjects.find(b => b.def.id === hit.id);
-        const blockWidth = bo.x2 - bo.x1;
-        const progress = Math.max(0, Math.min(1, (this.carX - bo.x1) / blockWidth));
+      if (hit && hitBlockObj) {
+        const blockWidth = hitBlockObj.x2 - hitBlockObj.x1;
+        const progress = Math.max(0, Math.min(1, (this.carX - hitBlockObj.x1) / blockWidth));
 
         if (this.activeBlockId !== hit.id) {
           // First time entering this block — show header info
