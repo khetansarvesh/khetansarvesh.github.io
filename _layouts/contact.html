@@ -1,0 +1,64 @@
+---
+layout: page-noscript
+refactor: true
+---
+
+<style>
+  #contact-container {
+    position: fixed;
+    top: 0;
+    left: 260px;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+    background: var(--main-bg, #f8f9fa);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px 20px 20px;
+  }
+
+  #contact-intro {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  #contact-intro p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-muted-color, #6c757d);
+  }
+
+  #contact-intro a {
+    color: var(--link-color, #007bff);
+  }
+
+  #contact-container iframe {
+    flex: 1;
+    width: 100%;
+    min-height: 700px;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  [data-bs-theme="dark"] #contact-container {
+    background: #1e1e1e;
+  }
+
+  @media (max-width: 849px) {
+    #contact-container {
+      left: 0;
+      padding-top: 60px;
+    }
+
+    #contact-container iframe {
+      min-height: 600px;
+    }
+  }
+</style>
+
+<div id="contact-container">
+  {{ content }}
+</div>
